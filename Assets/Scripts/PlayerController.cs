@@ -26,14 +26,11 @@ public class PlayerController : MonoBehaviour
     [Header("Movement Settings")]
     [SerializeField] private float moveSpeed = 5f;
     [SerializeField] private float sprintSpeed = 8f;
-    [SerializeField] private float jumpForce = 5f;
+    //[SerializeField] private float jumpForce = 5f;
     [Header("Camera Settings")]
     [SerializeField] private float mouseSensitivity = 2f;
     [SerializeField] private Transform cameraTransform;
     [SerializeField] private float maxLookAngle = 80f;
-    [SerializeField] private float normalFOV = 60f;
-    [SerializeField] private float sprintFOV = 70f;
-    [SerializeField] private float fovTransitionSpeed = 10f;
 
     //[Header("Sprint Settings")]
     //[SerializeField] private float sprintDuration = 2f;
@@ -44,7 +41,7 @@ public class PlayerController : MonoBehaviour
     public float Sprint = 1f;
     private bool CanSprint;
     private bool isSprinting = false;
-    private bool isJumping = true;
+    //private bool isJumping = true;
 
     [Header("Audio Settings")]
     [SerializeField] private AudioClip _walkingSound;
@@ -146,7 +143,7 @@ public class PlayerController : MonoBehaviour
         // Only allow jumping in Normal state
         if (currentState == PlayerState.Normal)
         {
-            HandleJump();
+            //HandleJump();
             //HandleWalkingSound();
         }
     }
@@ -244,24 +241,24 @@ public class PlayerController : MonoBehaviour
         rb.MovePosition(rb.position + move.normalized * currentSpeed * Time.deltaTime);
     }
 
-    private void HandleJump()
-    {
-        // Check if grounded
-        isGrounded = Physics.Raycast(transform.position, Vector3.down, 1.1f);
-        if (isGrounded)
-        {
-            isJumping = false;
-        }
-        // Jump
-        if (Input.GetKey(KeyCode.Space) && isGrounded && !isJumping && rb.velocity.y <= 1f)
-        {
-            //rb force jump
-            rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z); // reset y velocity before jump to prevent double jump height
-            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
-            isJumping = true;
-            //StopWalkingSound();
-        }
-    }
+    //private void HandleJump()
+    //{
+    //    // Check if grounded
+    //    isGrounded = Physics.Raycast(transform.position, Vector3.down, 1.1f);
+    //    if (isGrounded)
+    //    {
+    //        isJumping = false;
+    //    }
+    //    // Jump
+    //    if (Input.GetKey(KeyCode.Space) && isGrounded && !isJumping && rb.velocity.y <= 1f)
+    //    {
+    //        //rb force jump
+    //        rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z); // reset y velocity before jump to prevent double jump height
+    //        rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+    //        isJumping = true;
+    //        //StopWalkingSound();
+    //    }
+    //}
 
     private void HandleMouseLook()
     {
@@ -313,86 +310,6 @@ public class PlayerController : MonoBehaviour
         //}
     }
 
-
-    private void HandleSprint()
-    {
-        // Get current movement input to determine if player is sprinting
-        float moveX = Input.GetAxisRaw("Horizontal");
-        float moveZ = Input.GetAxisRaw("Vertical");
-        bool hasMovementInput = moveX != 0 || moveZ != 0;
-
-        // Update sprint state based on current conditions
-        if (!hasMovementInput)
-        {
-            isSprinting = false;
-        }
-
-        // lerp to transition FOV based on sprint state
-        float targetFOV;
-
-        if (isSprinting)
-        {
-            targetFOV = sprintFOV;
-            // if sprinting decrease sprint bar
-            //if (SprintBar.rectTransform.localScale.x >= 0f)
-            //{
-            //    Sprint -= 0.1f * sprintDuration * Time.deltaTime;
-            //}
-        }
-        else
-        {
-            targetFOV = normalFOV;
-            // if sprinting increase sprint bar
-            //if (SprintBar.rectTransform.localScale.x <= 1f)
-            //{
-            //    Sprint += 0.1f * sprintDuration * Time.deltaTime;
-            //}
-        }
-
-        // sprintbar coloring and sprint availability
-        if (Sprint <= 0f && CanSprint == true)
-        {
-            //SprintBar.color = Color.red;
-            CanSprint = false;
-            //Debug.Log("Out of sprint!");
-        }
-        if (Sprint >= 1f && CanSprint == false)
-        {
-            //SprintBar.color = new Color(0.678f, 0.996f, 1f); // #ADFEFF
-            CanSprint = true;
-            //Debug.Log("Sprint ready!");
-        }
-
-        // Handle alpha fade based on sprint availability for SprintBar
-        //Color sprintBarColor = SprintBar.color;
-        //Color sprintBarBackgroundColor = SprintBarBackground.color;
-
-        //if (Sprint >= 1f)
-        //{
-        //    // Fade to alpha 0 when sprint is full
-        //    sprintBarColor.a = Mathf.Lerp(sprintBarColor.a, 0f, fovTransitionSpeed * Time.deltaTime);
-        //    // Fade to alpha 0 when sprint is full
-        //    sprintBarBackgroundColor.a = Mathf.Lerp(sprintBarBackgroundColor.a, 0f, fovTransitionSpeed * Time.deltaTime);
-        //}
-        //else if (!CanSprint)
-        //{
-        //    // Pulsing alpha when sprint is unavailable
-        //    float alpha = Mathf.PingPong(Time.time * alphaBlinkSpeed, .5f);
-        //    sprintBarColor.a = alpha;
-        //}
-        //else
-        //{
-        //    // Normal alpha when sprint is available but not full
-        //    sprintBarColor.a = .5f;
-        //    // Normal alpha when sprint is available but not full
-        //    sprintBarBackgroundColor.a = .5f;
-        //}
-        //SprintBar.color = sprintBarColor;
-        //SprintBarBackground.color = sprintBarBackgroundColor;
-
-        playerCamera.fieldOfView = Mathf.Lerp(playerCamera.fieldOfView, targetFOV, fovTransitionSpeed * Time.deltaTime);
-        //SprintBar.rectTransform.localScale = new Vector3(Sprint, 1f, 1f);
-    }
 
     // Handle walking sound effects
     private void HandleWalkingSound()
