@@ -236,9 +236,9 @@ public class PlayerController : MonoBehaviour
             currentSpeed = moveSpeed;
         }
 
-        //rb player movement
+        // Player movement using transform
         Vector3 move = transform.right * moveX + transform.forward * moveZ;
-        rb.MovePosition(rb.position + move.normalized * currentSpeed * Time.deltaTime);
+        transform.Translate(move.normalized * currentSpeed * Time.deltaTime, Space.World);
     }
 
     //private void HandleJump()
