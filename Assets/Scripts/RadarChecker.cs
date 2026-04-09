@@ -1,10 +1,12 @@
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
 
 public class RadarChecker : MonoBehaviour
 {
-    [SerializeField] private Transform RadarPoint1;
+    [SerializeField] private GameObject RadarPingPrefab; // Prefab for radar ping visualization
+    [SerializeField] private GameObject RadarPingParent; // Parent object for radar prefab pings
     [SerializeField] private float maxRadarDistance = 50f; // Maximum detection range
     
     // Start is called before the first frame update
@@ -24,17 +26,19 @@ public class RadarChecker : MonoBehaviour
 
             // Map to radar coordinates (-0.21 to 0.21)
             float normalizedDistance = Mathf.Clamp01(distance / maxRadarDistance); // 0 to 1
-            float radarDistance = normalizedDistance * 0.42f; // 0 to 0.21
+            float radarDistance = normalizedDistance * 0.45f; // 0 to 0.45
 
             // Convert angle to radians for calculation
-            float angleRad = angle * Mathf.Deg2Rad;
+            // ADDS PLAYER ROTATION FOR RADAR POINT TO ROTATE WITH PLAYER
+            float angleRad = (angle + GameController.Instance.player.transform.eulerAngles.y) * Mathf.Deg2Rad;
 
             // Calculate radar X and Y positions
             float radarX = radarDistance * Mathf.Sin(angleRad);
             float radarY = radarDistance * Mathf.Cos(angleRad);
 
             // Update RadarPoint1 local position
-            RadarPoint1.localPosition = new Vector3(radarX, RadarPoint1.localPosition.y, -radarY);
+            //RadarPoint1.localPosition = new Vector3(radarX, RadarPoint1.localPosition.y, -radarY);
+            Instantiate(RadarPingPrefab, RadarPingParent.transform).transform.localPosition = new Vector3(radarX, -1.53f, -radarY);
         }
     }
 
