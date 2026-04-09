@@ -24,7 +24,7 @@ public class RadarChecker : MonoBehaviour
 
             // Map to radar coordinates (-0.21 to 0.21)
             float normalizedDistance = Mathf.Clamp01(distance / maxRadarDistance); // 0 to 1
-            float radarDistance = normalizedDistance * 0.21f; // 0 to 0.21
+            float radarDistance = normalizedDistance * 0.42f; // 0 to 0.21
 
             // Convert angle to radians for calculation
             float angleRad = angle * Mathf.Deg2Rad;
