@@ -114,8 +114,8 @@ public class PlayerController : MonoBehaviour
         switch (currentState)
         {
             case PlayerState.Normal:
-                HandleMovement();
-                HandleMouseLook();
+                //HandleMovement();
+                //HandleMouseLook();
                 //HandleSprint();
                 break;
 
@@ -143,6 +143,8 @@ public class PlayerController : MonoBehaviour
         // Only allow jumping in Normal state
         if (currentState == PlayerState.Normal)
         {
+            HandleMovement();
+            HandleMouseLook();
             //HandleJump();
             //HandleWalkingSound();
         }
