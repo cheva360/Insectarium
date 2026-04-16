@@ -59,9 +59,11 @@ Shader "Unlit/Radar Fade"
             {
                 fixed4 col = _Color;
                 
-                // linear
-                // _ElapsedTime * _FadeSpeed gives 0-1
+                //hi khang
+                // linear fade
+                // _ElapsedTime * _FadeSpeed gives 0-1 (needs to be normalized for alpha)
                 float fadeAlpha = 1.0 - (_ElapsedTime * _FadeSpeed);
+                //saturate clamps the value
                 fadeAlpha = saturate(fadeAlpha); // Clamp to 0-1 range
                 
                 col = fixed4(_Color.rgb, fadeAlpha * _Color.a);
