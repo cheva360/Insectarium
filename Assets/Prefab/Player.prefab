@@ -99,13 +99,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   RadarLine: {fileID: 6237450461397873386}
-  RadarChecker: {fileID: 0}
   MinimapRotate: {fileID: 5545949994645922468}
   RadarPingPrefab: {fileID: 4284893528188222474, guid: c8a3fb3ad3e12fa4e9b49e5f6173a45d,
     type: 3}
   RadarPingParent: {fileID: 4095257897836163348}
   maxRadarDistance: 50
   radarPingSound: {fileID: 8300000, guid: 8a30450c68fd3e247b6df2b6dd3fd3a0, type: 3}
+  sphereCastRadius: 1.5
   redetectionAngle: 45
 --- !u!82 &8440963199066477662
 AudioSource:

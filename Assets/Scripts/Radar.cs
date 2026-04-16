@@ -17,6 +17,7 @@ public class Radar : MonoBehaviour
     private Dictionary<Collider, float> lastDetectionAngle = new Dictionary<Collider, float>(); // Track last detection angle per object
     [SerializeField] private float redetectionAngle = 90f; // Minimum angle before object can be detected again
     private AudioSource audioSource;
+    private bool soundPlayedThisFrame = false; // Debounce audio playback
     
     // Start is called before the first frame update
     void Start()
@@ -32,6 +33,9 @@ public class Radar : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        // Reset audio debounce flag at start of frame
+        soundPlayedThisFrame = false;
+        
         // Accumulate rotation over time for smooth animation
         radarLineRotation -= 30f * Time.deltaTime; // 30 degrees per second
         radarSweepAngle += 30f * Time.deltaTime; // 30 degrees per second
@@ -124,7 +128,13 @@ public class Radar : MonoBehaviour
         // Create radar ping
         GameObject radarPing = Instantiate(RadarPingPrefab, RadarPingParent.transform);
         radarPing.transform.localPosition = new Vector3(radarX, -1.53f, -radarY);
-        audioSource.PlayOneShot(radarPingSound);
+        
+        // Play sound only once per frame even if multiple objects detected
+        if (!soundPlayedThisFrame && radarPingSound != null)
+        {
+            audioSource.PlayOneShot(radarPingSound);
+            soundPlayedThisFrame = true;
+        }
     }
 
     private void OnDrawGizmos()
