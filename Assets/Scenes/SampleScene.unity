@@ -1197,6 +1197,7 @@ MonoBehaviour:
     type: 3}
   RadarPingParent: {fileID: 300445710}
   maxRadarDistance: 30
+  radarPingShader: {fileID: 4800000, guid: 64bd0321d9c5b4244811cbac32ad7bde, type: 3}
 --- !u!1 &1196289765
 GameObject:
   m_ObjectHideFlags: 0

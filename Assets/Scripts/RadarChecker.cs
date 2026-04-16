@@ -8,7 +8,8 @@ public class RadarChecker : MonoBehaviour
     [SerializeField] private GameObject RadarPingPrefab; // Prefab for radar ping visualization
     [SerializeField] private GameObject RadarPingParent; // Parent object for radar prefab pings
     [SerializeField] private float maxRadarDistance = 50f; // Maximum detection range
-    
+    [SerializeField] private Shader radarPingShader; // Shader for radar ping visualization
+    private int radarPass = 1; // Pass index for radar ping shader
     // Start is called before the first frame update
     private void OnTriggerEnter(Collider other)
     {
@@ -38,7 +39,15 @@ public class RadarChecker : MonoBehaviour
 
             // Update RadarPoint1 local position
             //RadarPoint1.localPosition = new Vector3(radarX, RadarPoint1.localPosition.y, -radarY);
-            Instantiate(RadarPingPrefab, RadarPingParent.transform).transform.localPosition = new Vector3(radarX, -1.53f, -radarY);
+            GameObject radarPing = Instantiate(RadarPingPrefab, RadarPingParent.transform);
+            radarPing.transform.localPosition = new Vector3(radarX, -1.53f, -radarY);
+            // set pingmaterial to new name each pass to avoid material instance sharing and fading out all pings at once
+            Material pingMaterial = new Material(radarPingShader);
+            pingMaterial.name = $"RadarPingMaterial_{radarPass++}";
+            // set material fade - store the current time as spawn time
+            pingMaterial.SetFloat("_SpawnTime", Time.time); // Store when this ping was created
+            radarPing.GetComponent<MeshRenderer>().material = pingMaterial;
+            
         }
     }
 
