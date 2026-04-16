@@ -114,8 +114,8 @@ public class PlayerController : MonoBehaviour
         switch (currentState)
         {
             case PlayerState.Normal:
-                //HandleMovement();
-                //HandleMouseLook();
+                HandleMovement();
+                HandleMouseLook();
                 //HandleSprint();
                 break;
 
@@ -143,8 +143,8 @@ public class PlayerController : MonoBehaviour
         // Only allow jumping in Normal state
         if (currentState == PlayerState.Normal)
         {
-            HandleMovement();
-            HandleMouseLook();
+            //HandleMovement();
+            //HandleMouseLook();
             //HandleJump();
             //HandleWalkingSound();
         }
@@ -241,7 +241,7 @@ public class PlayerController : MonoBehaviour
         // Player movement using transform
         Vector3 move = transform.right * moveX + transform.forward * moveZ;
         //rb.MovePosition(rb.position + move.normalized * currentSpeed * Time.fixedDeltaTime);
-        transform.Translate(move.normalized * currentSpeed * Time.deltaTime, Space.World);
+        transform.Translate(move.normalized * currentSpeed * Time.fixedDeltaTime, Space.World);
     }
 
     //private void HandleJump()
@@ -268,8 +268,8 @@ public class PlayerController : MonoBehaviour
 
 
         // Get mouse input
-        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
-        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
+        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.fixedDeltaTime * 50f;
+        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.fixedDeltaTime * 50f;
 
 
         // Rotate player horizontally
