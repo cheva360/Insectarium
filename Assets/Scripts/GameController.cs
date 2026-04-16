@@ -7,6 +7,7 @@ public class GameController : MonoBehaviour
     public static GameController Instance { get; private set; }
 
     public GameObject player;
+    public Transform MinimapTransform;
 
     void Awake()
     {

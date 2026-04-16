@@ -28,7 +28,9 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Ints: []
-    m_Floats: []
+    m_Floats:
+    - _FadeSpeed: 1
+    - _Repeating: 0
     m_Colors:
-    - _Color: {r: 0, g: 1, b: 0, a: 1}
+    - _Color: {r: 0.14117648, g: 0.3647059, b: 0.21568628, a: 1}
   m_BuildTextureStacks: []
