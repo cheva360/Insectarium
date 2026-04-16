@@ -1131,6 +1131,11 @@ PrefabInstance:
       propertyPath: m_Name
       value: Player
       objectReference: {fileID: 0}
+    - target: {fileID: 3372155751487290508, guid: 8eb6acd3240438f45b0d87c30ea59cc7,
+        type: 3}
+      propertyPath: sphereCastRadius
+      value: 1.5
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

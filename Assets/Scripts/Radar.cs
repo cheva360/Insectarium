@@ -5,13 +5,12 @@ using UnityEngine;
 public class Radar : MonoBehaviour
 {
     [SerializeField] private GameObject RadarLine;
-    [SerializeField] private GameObject RadarChecker;
     [SerializeField] private Transform MinimapRotate;
     [SerializeField] private GameObject RadarPingPrefab; // Prefab for radar ping visualization
     [SerializeField] private GameObject RadarPingParent; // Parent object for radar prefab pings
     [SerializeField] private float maxRadarDistance = 50f; // Maximum detection range
     [SerializeField] private AudioClip radarPingSound; // Sound effect for radar ping
-    [SerializeField] private float sphereCastRadius = 1f; // Width of the radar sweep beam
+    [SerializeField] private float sphereCastRadius = 2f; // Width of the radar sweep beam
                                                            // 
     private float radarLineRotation = 0f;
     private float radarSweepAngle = 0f; // Current angle of the radar sweep
