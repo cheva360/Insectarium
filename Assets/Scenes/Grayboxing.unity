@@ -5754,7 +5754,7 @@ GameObject:
   - component: {fileID: 761102709}
   - component: {fileID: 761102712}
   - component: {fileID: 761102711}
-  - component: {fileID: 761102710}
+  - component: {fileID: 761102713}
   m_Layer: 0
   m_Name: garden area
   m_TagString: Untagged
@@ -5777,29 +5777,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 2130960789}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!136 &761102710
-CapsuleCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 761102708}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 0.5000001
-  m_Height: 2
-  m_Direction: 1
-  m_Center: {x: 0.000000059604645, y: 0, z: -0.00000008940697}
 --- !u!23 &761102711
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -5849,6 +5826,28 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 761102708}
+  m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!64 &761102713
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 761102708}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 5
+  m_Convex: 0
+  m_CookingOptions: 30
   m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &761417954
 GameObject:
@@ -12595,9 +12594,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   RadarLine: {fileID: 1823678600}
-  RadarChecker: {fileID: 1660986029}
-  PlayerRotate: {fileID: 93143467}
   MinimapRotate: {fileID: 1819849701}
+  RadarPingPrefab: {fileID: 0}
+  RadarPingParent: {fileID: 0}
+  maxRadarDistance: 50
+  radarPingSound: {fileID: 0}
+  sphereCastRadius: 2
+  redetectionAngle: 90
 --- !u!1 &1504717504
 GameObject:
   m_ObjectHideFlags: 0
@@ -13772,10 +13775,19 @@ MonoBehaviour:
   mouseSensitivity: 1
   cameraTransform: {fileID: 330585546}
   maxLookAngle: 80
+  radar3DModel: {fileID: 0}
+  radarSwayAmount: 0.05
+  radarSwaySmooth: 8
+  radarSwayDamping: 5
+  radarBobFrequency: 10
+  radarBobHorizontalAmount: 0.02
+  radarBobVerticalAmount: 0.03
+  radarReturnToNeutralSpeed: 3
   Sprint: 1
   _walkingSound: {fileID: 0}
   _sprintSound: {fileID: 0}
   _audioSource: {fileID: 0}
+  _audioFadeOutDuration: 0.2
   _lineofSightMaxDist: 0
   _raycastStartOffset: {x: 0, y: 0, z: 0}
   playerCamera: {fileID: 0}
