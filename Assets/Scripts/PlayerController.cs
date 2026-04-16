@@ -26,7 +26,9 @@ public class PlayerController : MonoBehaviour
     [Header("Movement Settings")]
     [SerializeField] private float moveSpeed = 5f;
     [SerializeField] private float sprintSpeed = 8f;
+    [SerializeField] private float gravity = -9.81f;
     //[SerializeField] private float jumpForce = 5f;
+    
     [Header("Camera Settings")]
     [SerializeField] private float mouseSensitivity = 2f;
     [SerializeField] private Transform cameraTransform;
@@ -55,7 +57,7 @@ public class PlayerController : MonoBehaviour
 
     //private string _npcTag = "NPC";
 
-    [SerializeField] private Rigidbody rb;
+    private CharacterController characterController;
     public Camera playerCamera;
     private Vector3 velocity;
     private bool isGrounded;
@@ -68,7 +70,8 @@ public class PlayerController : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        rb = GetComponent<Rigidbody>();
+        characterController = GetComponent<CharacterController>();
+        
         // Lock and hide cursor
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
@@ -114,8 +117,8 @@ public class PlayerController : MonoBehaviour
         switch (currentState)
         {
             case PlayerState.Normal:
-                //HandleMovement();
-                //HandleMouseLook();
+                HandleMovement();
+                HandleMouseLook();
                 //HandleSprint();
                 break;
 
@@ -136,18 +139,6 @@ public class PlayerController : MonoBehaviour
                 break;
         }
 
-    }
-
-    private void FixedUpdate()
-    {
-        // Only allow jumping in Normal state
-        if (currentState == PlayerState.Normal)
-        {
-            HandleMovement();
-            HandleMouseLook();
-            //HandleJump();
-            //HandleWalkingSound();
-        }
     }
 
     // Change the player's state
@@ -177,21 +168,21 @@ public class PlayerController : MonoBehaviour
 
             case PlayerState.InDialogue:
                 // Stop any movement
-                rb.velocity = new Vector3(0, rb.velocity.y, 0);
+                velocity = Vector3.zero;
                 isSprinting = false;
                 //StopWalkingSound();
                 break;
 
             case PlayerState.Cutscene:
                 // Stop all movement and store camera state if needed
-                rb.velocity = new Vector3(0, rb.velocity.y, 0);
+                velocity = Vector3.zero;
                 isSprinting = false;
                 //StopWalkingSound();
                 break;
 
             case PlayerState.Disabled:
                 // Stop all movement
-                rb.velocity = new Vector3(0, rb.velocity.y, 0);
+                velocity = Vector3.zero;
                 isSprinting = false;
                 //StopWalkingSound();
                 break;
@@ -213,19 +204,15 @@ public class PlayerController : MonoBehaviour
 
     private void HandleMovement()
     {
+        // Check if grounded
+        isGrounded = characterController.isGrounded;
 
         // Get input
         float moveX = Input.GetAxisRaw("Horizontal");
         float moveZ = Input.GetAxisRaw("Vertical");
 
-        // Only process movement if there's input
-        if (moveX == 0 && moveZ == 0)
-        {
-            return;
-        }
-
         // Check if sprinting
-        isSprinting = Input.GetKey(KeyCode.LeftShift) && CanSprint && (moveX != 0 || moveZ != 0);
+        //isSprinting = Input.GetKey(KeyCode.LeftShift) && CanSprint && (moveX != 0 || moveZ != 0);
 
         // Calculate current speed
         float currentSpeed;
@@ -238,26 +225,34 @@ public class PlayerController : MonoBehaviour
             currentSpeed = moveSpeed;
         }
 
-        // Player movement using transform
+        // Calculate movement direction relative to player rotation
         Vector3 move = transform.right * moveX + transform.forward * moveZ;
-        //rb.MovePosition(rb.position + move.normalized * currentSpeed * Time.fixedDeltaTime);
-        transform.Translate(move.normalized * currentSpeed * Time.fixedDeltaTime, Space.World);
+
+        // Move the character
+        characterController.Move(move.normalized * currentSpeed * Time.deltaTime);
+
+        // Apply gravity
+        if (isGrounded && velocity.y < 0)
+        {
+            velocity.y = -2f; // Small downward force to keep grounded
+        }
+
+        velocity.y += gravity * Time.deltaTime;
+        characterController.Move(velocity * Time.deltaTime);
     }
 
     //private void HandleJump()
     //{
     //    // Check if grounded
-    //    isGrounded = Physics.Raycast(transform.position, Vector3.down, 1.1f);
+    //    isGrounded = characterController.isGrounded;
     //    if (isGrounded)
     //    {
     //        isJumping = false;
     //    }
     //    // Jump
-    //    if (Input.GetKey(KeyCode.Space) && isGrounded && !isJumping && rb.velocity.y <= 1f)
+    //    if (Input.GetKeyDown(KeyCode.Space) && isGrounded && !isJumping)
     //    {
-    //        //rb force jump
-    //        rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z); // reset y velocity before jump to prevent double jump height
-    //        rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+    //        velocity.y = Mathf.Sqrt(jumpForce * -2f * gravity);
     //        isJumping = true;
     //        //StopWalkingSound();
     //    }
@@ -265,12 +260,9 @@ public class PlayerController : MonoBehaviour
 
     private void HandleMouseLook()
     {
-
-
         // Get mouse input
-        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.fixedDeltaTime * 50f;
-        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.fixedDeltaTime * 50f;
-
+        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
+        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
 
         // Rotate player horizontally
         transform.Rotate(Vector3.up * mouseX);
@@ -318,7 +310,6 @@ public class PlayerController : MonoBehaviour
     private void HandleWalkingSound()
     {
         // Calculate horizontal velocity magnitude (ignore vertical movement)
-        //Vector3 horizontalVelocity = new Vector3(rb.velocity.x, 0, rb.velocity.z);
         float moveX = Input.GetAxisRaw("Horizontal");
         float moveZ = Input.GetAxisRaw("Vertical");
         Vector3 move = transform.right * moveX + transform.forward * moveZ;
