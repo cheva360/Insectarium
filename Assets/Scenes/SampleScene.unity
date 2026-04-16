@@ -301,12 +301,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &300445710 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 4095257897836163348, guid: 8eb6acd3240438f45b0d87c30ea59cc7,
-    type: 3}
-  m_PrefabInstance: {fileID: 444615306016891508}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -1137,32 +1131,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Player
       objectReference: {fileID: 0}
-    - target: {fileID: 3372155751487290508, guid: 8eb6acd3240438f45b0d87c30ea59cc7,
-        type: 3}
-      propertyPath: PlayerRotate
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: 3372155751487290508, guid: 8eb6acd3240438f45b0d87c30ea59cc7,
-        type: 3}
-      propertyPath: RadarChecker
-      value: 
-      objectReference: {fileID: 0}
-    - target: {fileID: 3372155751487290508, guid: 8eb6acd3240438f45b0d87c30ea59cc7,
-        type: 3}
-      propertyPath: raycastRadius
-      value: 50
-      objectReference: {fileID: 0}
-    - target: {fileID: 3372155751487290508, guid: 8eb6acd3240438f45b0d87c30ea59cc7,
-        type: 3}
-      propertyPath: RadarPingParent
-      value: 
-      objectReference: {fileID: 300445710}
-    - target: {fileID: 3372155751487290508, guid: 8eb6acd3240438f45b0d87c30ea59cc7,
-        type: 3}
-      propertyPath: RadarPingPrefab
-      value: 
-      objectReference: {fileID: 4284893528188222474, guid: c8a3fb3ad3e12fa4e9b49e5f6173a45d,
-        type: 3}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
