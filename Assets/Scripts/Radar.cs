@@ -8,6 +8,10 @@ public class Radar : MonoBehaviour
     [SerializeField] private GameObject RadarChecker;
     [SerializeField] private Transform PlayerRotate;
     [SerializeField] private Transform MinimapRotate;
+    
+    private float radarLineRotation = 0f;
+    private float radarCheckerRotation = 0f;
+    
     // Start is called before the first frame update
     void Start()
     {
@@ -17,8 +21,13 @@ public class Radar : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        RadarLine.transform.Rotate(0, 0, -0.1f);
-        RadarChecker.transform.Rotate(0, 0.1f, 0);
+        // Accumulate rotation over time for smooth animation
+        radarLineRotation -= 30f * Time.deltaTime; // 30 degrees per second
+        radarCheckerRotation += 30f * Time.deltaTime; // 30 degrees per second
+        
+        RadarLine.transform.localRotation = Quaternion.Euler(RadarLine.transform.localEulerAngles.x, RadarLine.transform.localEulerAngles.y, radarLineRotation);
+        RadarChecker.transform.localRotation = Quaternion.Euler(0, radarCheckerRotation, 0);
+        
         RadarChecker.transform.position = GameController.Instance.player.transform.position;
         PlayerRotate.transform.rotation = Quaternion.Euler(0, GameController.Instance.player.transform.eulerAngles.y, 0);
         MinimapRotate.transform.rotation = Quaternion.Euler(MinimapRotate.eulerAngles.x, MinimapRotate.eulerAngles.y, GameController.Instance.player.transform.eulerAngles.y);
