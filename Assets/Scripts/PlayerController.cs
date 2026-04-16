@@ -33,6 +33,17 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float mouseSensitivity = 2f;
     [SerializeField] private Transform cameraTransform;
     [SerializeField] private float maxLookAngle = 80f;
+    [SerializeField] private Transform radar3DModel;
+
+    [Header("Radar Animation Settings")]
+    [SerializeField] private float radarSwayAmount = 0.05f;
+    [SerializeField] private float radarSwaySmooth = 8f;
+    [SerializeField] private float radarSwayDamping = 5f;
+    [SerializeField] private float radarBobFrequency = 10f;
+    [SerializeField] private float radarBobHorizontalAmount = 0.02f;
+    [SerializeField] private float radarBobVerticalAmount = 0.03f;
+    [SerializeField] private float radarReturnToNeutralSpeed = 3f;
+
 
     //[Header("Sprint Settings")]
     //[SerializeField] private float sprintDuration = 2f;
@@ -49,6 +60,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private AudioClip _walkingSound;
     [SerializeField] private AudioClip _sprintSound;
     [SerializeField] private AudioSource _audioSource;
+    [SerializeField] private float _audioFadeOutDuration = 0.2f;
 
     [Header("Raycast Settings")]
     [SerializeField] private float _lineofSightMaxDist;
@@ -65,6 +77,17 @@ public class PlayerController : MonoBehaviour
     private bool _isPlayingFootsteps = false;
     // Variables for Gizmo drawing
     private Vector3 _raycastHitLocation;
+
+    // Radar animation variables
+    private Vector3 radarOriginalPosition;
+    private float radarSwayOffset = 0f;
+    private float radarSwayVelocity = 0f;
+    private float bobTimer = 0f;
+    private Vector3 currentBobOffset = Vector3.zero;
+
+    // Audio fade variables
+    private Coroutine _fadeOutCoroutine;
+    private float _originalVolume = 1f;
 
 
     // Start is called before the first frame update
@@ -83,6 +106,18 @@ public class PlayerController : MonoBehaviour
         if (_audioSource == null)
         {
             _audioSource = GetComponent<AudioSource>();
+        }
+
+        // Store original volume
+        if (_audioSource != null)
+        {
+            _originalVolume = _audioSource.volume;
+        }
+
+        // Store radar's original local position
+        if (radar3DModel != null)
+        {
+            radarOriginalPosition = radar3DModel.localPosition;
         }
 
         // Auto-assign main camera if not set
@@ -119,6 +154,8 @@ public class PlayerController : MonoBehaviour
             case PlayerState.Normal:
                 HandleMovement();
                 HandleMouseLook();
+                HandleRadarAnimation();
+                HandleWalkingSound();
                 //HandleSprint();
                 break;
 
@@ -273,6 +310,55 @@ public class PlayerController : MonoBehaviour
         cameraTransform.localRotation = Quaternion.Euler(verticalRotation, 0f, 0f);
     }
 
+    private void HandleRadarAnimation()
+    {
+        if (radar3DModel == null) return;
+
+        // Get mouse input for sway
+        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
+
+        // Calculate target sway offset based on horizontal camera movement
+        float targetSwayOffset = -mouseX * radarSwayAmount;
+
+        // Use SmoothDamp for buttery smooth sway with velocity-based damping
+        radarSwayOffset = Mathf.SmoothDamp(radarSwayOffset, targetSwayOffset, ref radarSwayVelocity, 1f / radarSwaySmooth, Mathf.Infinity, Time.deltaTime);
+
+        // Apply additional damping to return to center when no input
+        radarSwayOffset = Mathf.Lerp(radarSwayOffset, 0f, radarSwayDamping * Time.deltaTime);
+
+        // Check if player is moving
+        float moveX = Input.GetAxisRaw("Horizontal");
+        float moveZ = Input.GetAxisRaw("Vertical");
+        bool isMoving = (moveX != 0 || moveZ != 0) && isGrounded;
+
+        Vector3 targetBobOffset = Vector3.zero;
+
+        if (isMoving)
+        {
+            // Increment bob timer
+            float speedMultiplier = isSprinting ? 1.5f : 1f;
+            bobTimer += Time.deltaTime * radarBobFrequency * speedMultiplier;
+
+            // Calculate bob offsets using sine waves
+            float horizontalBob = Mathf.Sin(bobTimer) * radarBobHorizontalAmount;
+            float verticalBob = Mathf.Sin(bobTimer * 2f) * radarBobVerticalAmount;
+
+            targetBobOffset = new Vector3(horizontalBob, verticalBob, 0f);
+        }
+        else
+        {
+            // Slowly reset bob timer when not moving to avoid sudden jumps
+            bobTimer = Mathf.Lerp(bobTimer, 0f, radarReturnToNeutralSpeed * Time.deltaTime);
+        }
+
+        // Smoothly lerp current bob offset towards target (includes returning to zero)
+        currentBobOffset = Vector3.Lerp(currentBobOffset, targetBobOffset, radarReturnToNeutralSpeed * Time.deltaTime);
+
+        // Combine all offsets: original position + sway (X) + bob (X, Y)
+        Vector3 swayOffset = new Vector3(radarSwayOffset, 0f, 0f);
+        radar3DModel.localPosition = radarOriginalPosition + swayOffset + currentBobOffset;
+    }
+
     private void LerpToNPC()
     {
         //// Raycast to find NPC position
@@ -319,6 +405,13 @@ public class PlayerController : MonoBehaviour
         // Play footsteps if player is moving and grounded
         if (movementSpeed >= 0.1f && isGrounded)
         {
+            // Cancel any ongoing fade out
+            if (_fadeOutCoroutine != null)
+            {
+                StopCoroutine(_fadeOutCoroutine);
+                _fadeOutCoroutine = null;
+            }
+
             if (!_isPlayingFootsteps && _audioSource != null && _walkingSound != null)
             {
                 if (isSprinting && _sprintSound != null)
@@ -329,12 +422,16 @@ public class PlayerController : MonoBehaviour
                 {
                     _audioSource.clip = _walkingSound;
                 }
+                _audioSource.volume = _originalVolume;
                 _audioSource.loop = true;
                 _audioSource.Play();
                 _isPlayingFootsteps = true;
             }
             else if (_isPlayingFootsteps && _audioSource != null)
             {
+                // Ensure volume is at original level when playing
+                _audioSource.volume = _originalVolume;
+
                 // Switch audio clips if sprint state changed while already playing
                 AudioClip targetClip = (isSprinting && _sprintSound != null) ? _sprintSound : _walkingSound;
                 if (_audioSource.clip != targetClip)
@@ -351,14 +448,33 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    // Stop walking sound
+    // Stop walking sound with fade out
     private void StopWalkingSound()
     {
-        if (_isPlayingFootsteps && _audioSource != null)
+        if (_isPlayingFootsteps && _audioSource != null && _fadeOutCoroutine == null)
         {
-            _audioSource.loop = false;
-            _audioSource.Stop();
-            _isPlayingFootsteps = false;
+            _fadeOutCoroutine = StartCoroutine(FadeOutAndStop());
         }
+    }
+
+    // Coroutine to fade out audio volume before stopping
+    private IEnumerator FadeOutAndStop()
+    {
+        float startVolume = _audioSource.volume;
+        float elapsed = 0f;
+
+        while (elapsed < _audioFadeOutDuration)
+        {
+            elapsed += Time.deltaTime;
+            _audioSource.volume = Mathf.Lerp(startVolume, 0f, elapsed / _audioFadeOutDuration);
+            yield return null;
+        }
+
+        _audioSource.volume = 0f;
+        _audioSource.loop = false;
+        _audioSource.Stop();
+        _audioSource.volume = _originalVolume;
+        _isPlayingFootsteps = false;
+        _fadeOutCoroutine = null;
     }
 }

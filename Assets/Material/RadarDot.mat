@@ -99,6 +99,7 @@ Material:
     - _DetailNormalMapScale: 1
     - _DstBlend: 10
     - _DstBlendAlpha: 10
+    - _ElapsedTime: 0
     - _EnvironmentReflections: 1
     - _FadeSpeed: 2
     - _GlossMapScale: 0
@@ -110,7 +111,7 @@ Material:
     - _Parallax: 0.005
     - _QueueOffset: 0
     - _ReceiveShadows: 1
-    - _Repeating: 1
+    - _Repeating: 0
     - _SampleGI: 0
     - _Shininess: 0
     - _Smoothness: 0.5

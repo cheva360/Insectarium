@@ -4,7 +4,6 @@ Shader "Unlit/Radar Fade"
     {
         _Color ("Dot Color", Color) = (0, 1, 0, 1)
         _FadeSpeed ("Fade Speed", Float) = 1.0
-        _Repeating ("Repeating", Range(0.0, 1.0)) = 0
         _ElapsedTime ("Elapsed Time", Float) = 0.0
     }
     SubShader
@@ -40,12 +39,7 @@ Shader "Unlit/Radar Fade"
             float4 _MainTex_ST;
             fixed4 _Color;
             float _FadeSpeed;
-            float _Repeating;
             float _ElapsedTime;
-
-            float impulse( float k, float x ){
-                float h = k*x;
-                return h *exp(1.0-h);
             }
 
             float plot(float2 st, float pct){
@@ -64,13 +58,11 @@ Shader "Unlit/Radar Fade"
             fixed4 frag (v2f i) : SV_Target
             {
                 fixed4 col = _Color;
-                float timeValue = _ElapsedTime;
                 
-                if (_Repeating)
-                    timeValue = fmod(_ElapsedTime, _FadeSpeed * 2.5);
-                
-                // Exponential fade out: start at 1.0, fade to 0
-                float fadeAlpha = exp(-_FadeSpeed * timeValue * 2.0);
+                // linear
+                // _ElapsedTime * _FadeSpeed gives 0-1
+                float fadeAlpha = 1.0 - (_ElapsedTime * _FadeSpeed);
+                fadeAlpha = saturate(fadeAlpha); // Clamp to 0-1 range
                 
                 col = fixed4(_Color.rgb, fadeAlpha * _Color.a);
                 return col;

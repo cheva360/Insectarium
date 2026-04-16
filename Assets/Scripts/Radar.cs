@@ -10,16 +10,24 @@ public class Radar : MonoBehaviour
     [SerializeField] private GameObject RadarPingPrefab; // Prefab for radar ping visualization
     [SerializeField] private GameObject RadarPingParent; // Parent object for radar prefab pings
     [SerializeField] private float maxRadarDistance = 50f; // Maximum detection range
-    [SerializeField] private Shader radarPingShader; // Shader for radar ping visualization
-    
+    [SerializeField] private AudioClip radarPingSound; // Sound effect for radar ping
+    [SerializeField] private float sphereCastRadius = 1f; // Width of the radar sweep beam
+                                                           // 
     private float radarLineRotation = 0f;
     private float radarSweepAngle = 0f; // Current angle of the radar sweep
-    private HashSet<Collider> detectedThisRotation = new HashSet<Collider>(); // Track detected objects per rotation
+    private Dictionary<Collider, float> lastDetectionAngle = new Dictionary<Collider, float>(); // Track last detection angle per object
+    [SerializeField] private float redetectionAngle = 90f; // Minimum angle before object can be detected again
+    private AudioSource audioSource;
     
     // Start is called before the first frame update
     void Start()
     {
-        
+        // Get or add AudioSource component
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+        }
     }
 
     // Update is called once per frame
@@ -29,11 +37,12 @@ public class Radar : MonoBehaviour
         radarLineRotation -= 30f * Time.deltaTime; // 30 degrees per second
         radarSweepAngle += 30f * Time.deltaTime; // 30 degrees per second
         
-        // Reset detection tracking after full rotation
+        // Normalize angle to 0-360 range
         if (radarSweepAngle >= 360f)
         {
             radarSweepAngle -= 360f;
-            detectedThisRotation.Clear();
+            // Clean up old entries
+            lastDetectionAngle.Clear();
         }
         
         RadarLine.transform.localRotation = Quaternion.Euler(RadarLine.transform.localEulerAngles.x, RadarLine.transform.localEulerAngles.y, radarLineRotation);
@@ -50,9 +59,10 @@ public class Radar : MonoBehaviour
         float absoluteAngle = radarSweepAngle + GameController.Instance.player.transform.eulerAngles.y;
         Vector3 sweepDirection = Quaternion.Euler(0, absoluteAngle, 0) * Vector3.forward;
         
-        // Perform Raycast from player position
-        RaycastHit[] hits = Physics.RaycastAll(
+        // Perform SphereCast from player position for wider detection area
+        RaycastHit[] hits = Physics.SphereCastAll(
             GameController.Instance.player.transform.position,
+            sphereCastRadius,
             sweepDirection,
             maxRadarDistance
         );
@@ -60,10 +70,30 @@ public class Radar : MonoBehaviour
         // Process all hits
         foreach (RaycastHit hit in hits)
         {
-            if (hit.collider.CompareTag("RadarObj") && !detectedThisRotation.Contains(hit.collider))
+            if (hit.collider.CompareTag("RadarObj"))
             {
-                detectedThisRotation.Add(hit.collider);
-                CreateRadarPing(hit.collider.transform.position);
+                bool shouldDetect = false;
+                
+                if (!lastDetectionAngle.ContainsKey(hit.collider))
+                {
+                    // First time detecting this object
+                    shouldDetect = true;
+                }
+                else
+                {
+                    // Check if enough angle has passed since last detection
+                    float angleDifference = Mathf.Abs(Mathf.DeltaAngle(lastDetectionAngle[hit.collider], radarSweepAngle));
+                    if (angleDifference >= redetectionAngle)
+                    {
+                        shouldDetect = true;
+                    }
+                }
+                
+                if (shouldDetect)
+                {
+                    lastDetectionAngle[hit.collider] = radarSweepAngle;
+                    CreateRadarPing(hit.collider.transform.position);
+                }
             }
         }
     }
@@ -78,7 +108,7 @@ public class Radar : MonoBehaviour
         float angle = Vector3.SignedAngle(GameController.Instance.player.transform.forward, directionToObject, Vector3.up);
 
         // Debug the information
-        Debug.Log($"Radar Detection - Position: {worldPosition} | Angle: {angle:F2}° | Distance: {distance:F2}m");
+        //Debug.Log($"Radar Detection - Position: {worldPosition} | Angle: {angle:F2}° | Distance: {distance:F2}m");
 
         // Map to radar coordinates (-0.21 to 0.21)
         float normalizedDistance = Mathf.Clamp01(distance / maxRadarDistance); // 0 to 1
@@ -95,7 +125,7 @@ public class Radar : MonoBehaviour
         // Create radar ping
         GameObject radarPing = Instantiate(RadarPingPrefab, RadarPingParent.transform);
         radarPing.transform.localPosition = new Vector3(radarX, -1.53f, -radarY);
-        
+        audioSource.PlayOneShot(radarPingSound);
     }
 
     private void OnDrawGizmos()
@@ -113,6 +143,10 @@ public class Radar : MonoBehaviour
         // Draw the sweep ray (thin line)
         Gizmos.color = Color.cyan;
         Gizmos.DrawLine(playerPos, playerPos + sweepDirection * maxRadarDistance);
+        
+        // Draw sphere cast radius
+        Gizmos.color = Color.blue;
+        Gizmos.DrawWireSphere(playerPos + sweepDirection * (maxRadarDistance * 0.5f), sphereCastRadius);
         
         // Draw the maximum detection range circle
         Gizmos.color = Color.green;

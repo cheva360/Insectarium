@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 4864543382434121528}
   - component: {fileID: 3471709527047411434}
   - component: {fileID: 1364603608348951009}
-  - component: {fileID: 2386873920534841526}
+  - component: {fileID: 6741471432463453137}
   m_Layer: 6
   m_Name: radarSphere 1
   m_TagString: Untagged
@@ -63,7 +63,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 078e7377ed3f9f14cb39fe32d7a20203, type: 2}
+  - {fileID: 2100000, guid: 965f966731cec22468a310e715e6ca00, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -106,7 +106,7 @@ SphereCollider:
   serializedVersion: 3
   m_Radius: 0.5
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &2386873920534841526
+--- !u!114 &6741471432463453137
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -115,6 +115,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 4284893528188222474}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 116280baf85f3b844a222401816457bb, type: 3}
+  m_Script: {fileID: 11500000, guid: f7faa898ba0e59846a7ab0fe426615fd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  fadeDuration: 2
