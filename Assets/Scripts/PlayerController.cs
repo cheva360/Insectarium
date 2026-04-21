@@ -344,6 +344,7 @@ public class PlayerController : MonoBehaviour
             float verticalBob = Mathf.Sin(bobTimer * 2f) * radarBobVerticalAmount;
 
             targetBobOffset = new Vector3(horizontalBob, verticalBob, 0f);
+            
         }
         else
         {
