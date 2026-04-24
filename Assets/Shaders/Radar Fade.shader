@@ -5,13 +5,11 @@ Shader "Unlit/Radar Fade"
         _Color ("Dot Color", Color) = (0, 1, 0, 1)
         _FadeSpeed ("Fade Speed", Float) = 1.0
         _Repeating ("Repeating", Range(0.0, 1.0)) = 0
-        _ElapsedTime ("Elapsed Time", Float) = 0.0
     }
     SubShader
     {
         Tags { "RenderType"="Transparent" "Queue" = "Transparent" }
         LOD 100
-        
         
         Pass
         {
@@ -20,6 +18,9 @@ Shader "Unlit/Radar Fade"
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag
+
+            #pragma multi_compile_instancing
+            #pragma shader_feature_local_fragment _EMISSION
             
             #include "UnityCG.cginc"
 
@@ -41,7 +42,6 @@ Shader "Unlit/Radar Fade"
             fixed4 _Color;
             float _FadeSpeed;
             float _Repeating;
-            float _ElapsedTime;
 
             float impulse( float k, float x ){
                 float h = k*x;
@@ -64,15 +64,13 @@ Shader "Unlit/Radar Fade"
             fixed4 frag (v2f i) : SV_Target
             {
                 fixed4 col = _Color;
-                float timeValue = _ElapsedTime;
-                
+                //col = fixed4(0.0, _SinTime.w + 0.5, 0.0, 1.0);
                 if (_Repeating)
-                    timeValue = fmod(_ElapsedTime, _FadeSpeed * 2.5);
-                
-                // Exponential fade out: start at 1.0, fade to 0
-                float fadeAlpha = exp(-_FadeSpeed * timeValue * 2.0);
-                
-                col = fixed4(_Color.rgb, fadeAlpha * _Color.a);
+                    _Time %= _FadeSpeed*2.5;
+
+                distance(i.uv, float2(0.5, 0.5));
+                    
+                col = fixed4(_Color.rgb, _FadeSpeed * _Time.w*exp(1.0-_FadeSpeed * _Time.w));
                 return col;
             }
             ENDCG

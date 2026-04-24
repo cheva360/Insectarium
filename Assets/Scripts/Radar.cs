@@ -111,7 +111,7 @@ public class Radar : MonoBehaviour
         float angle = Vector3.SignedAngle(GameController.Instance.player.transform.forward, directionToObject, Vector3.up);
 
         // Debug the information
-        //Debug.Log($"Radar Detection - Position: {worldPosition} | Angle: {angle:F2}° | Distance: {distance:F2}m");
+        //Debug.Log($"Radar Detection - Position: {worldPosition} | Angle: {angle:F2}ï¿½ | Distance: {distance:F2}m");
 
         // Map to radar coordinates (-0.21 to 0.21)
         float normalizedDistance = Mathf.Clamp01(distance / maxRadarDistance); // 0 to 1

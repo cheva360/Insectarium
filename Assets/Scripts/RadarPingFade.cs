@@ -10,8 +10,11 @@ public class RadarPingFade : MonoBehaviour
     {
         spawnTime = Time.time;
         MeshRenderer renderer = GetComponent<MeshRenderer>();
+        Material mat = new Material(Shader.Find("Unlit/Radar Fade"));
+        renderer.material = mat;
         pingMaterial = renderer.material;
         pingMaterial.SetFloat("_FadeSpeed", 1.0f / fadeDuration);
+        pingMaterial.enableInstancing = true;
     }
 
     private void Update()
@@ -20,7 +23,7 @@ public class RadarPingFade : MonoBehaviour
         float elapsedTime = Time.time - spawnTime;
             
         // Update shader with elapsed time
-        pingMaterial.SetFloat("_ElapsedTime", elapsedTime);
+        //pingMaterial.SetFloat("_ElapsedTime", elapsedTime);
 
         // Optionally destroy after fade completes
         if (elapsedTime > fadeDuration)
