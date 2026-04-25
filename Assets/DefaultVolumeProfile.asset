@@ -281,6 +281,28 @@ MonoBehaviour:
   worldOffset:
     m_OverrideState: 1
     m_Value: {x: 0, y: 0, z: 0}
+--- !u!114 &-581506417106123525
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 35ffd7e8bc8795a4db0405d9045c89d2, type: 3}
+  m_Name: PixelationVolumeComponent
+  m_EditorClassIdentifier: Assembly-CSharp::PixelationVolumeComponent
+  active: 1
+  widthPixelation:
+    m_OverrideState: 1
+    m_Value: 512
+  heightPixelation:
+    m_OverrideState: 1
+    m_Value: 512
+  colorPrecision:
+    m_OverrideState: 1
+    m_Value: 32
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -313,6 +335,7 @@ MonoBehaviour:
   - {fileID: 7200609691079647228}
   - {fileID: 1645561595225413413}
   - {fileID: -1188265064307378122}
+  - {fileID: -581506417106123525}
 --- !u!114 &284281109517228416
 MonoBehaviour:
   m_ObjectHideFlags: 3
