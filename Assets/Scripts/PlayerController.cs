@@ -421,11 +421,9 @@ public class PlayerController : MonoBehaviour
     {
         _isPlayingFootsteps = true;
         _nextFootstep = 0;
-        _audioSource.volume = _originalVolume;
 
         while (true)
         {
-            // Before playing, check if still walking
             if (!IsWalking())
                 break;
 
@@ -434,69 +432,34 @@ public class PlayerController : MonoBehaviour
 
             if (clip != null)
             {
-                _audioSource.volume = _originalVolume;
                 _audioSource.clip = clip;
                 _audioSource.Play();
 
-                // Wait for clip to finish, checking each frame if player stopped
-                float elapsed = 0f;
-                bool stoppedEarly = false;
-                while (elapsed < clip.length)
-                {
-                    elapsed += Time.deltaTime;
-
-                    if (!IsWalking())
-                    {
-                        // Fade out the remainder of the current clip
-                        float remaining = clip.length - elapsed;
-                        float fadeDuration = Mathf.Min(_audioFadeOutDuration, remaining);
-                        float fadeElapsed = 0f;
-                        float startVolume = _audioSource.volume;
-
-                        while (fadeElapsed < fadeDuration)
-                        {
-                            fadeElapsed += Time.deltaTime;
-                            _audioSource.volume = Mathf.Lerp(startVolume, 0f, fadeElapsed / fadeDuration);
-                            yield return null;
-                        }
-
-                        _audioSource.Stop();
-                        _audioSource.volume = _originalVolume;
-                        stoppedEarly = true;
-                        break;
-                    }
-
-                    yield return null;
-                }
-
-                if (stoppedEarly)
-                    break;
+                // Wait for the clip to finish naturally — no early stop
+                yield return new WaitForSeconds(clip.length);
             }
             else
             {
                 yield return null;
             }
 
-            // After clip finishes naturally, check again before playing next
+            // Clip finished — only continue to next footstep if still walking
             if (!IsWalking())
                 break;
         }
 
-        _audioSource.volume = _originalVolume;
         _isPlayingFootsteps = false;
         _footstepCoroutine = null;
     }
 
     private void StopWalkingSound()
     {
-        // Force-stop for state changes (dialogue, cutscene, etc.)
         if (_footstepCoroutine != null)
         {
             StopCoroutine(_footstepCoroutine);
             _footstepCoroutine = null;
         }
         _audioSource.Stop();
-        _audioSource.volume = _originalVolume;
         _isPlayingFootsteps = false;
     }
 }

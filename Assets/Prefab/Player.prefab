@@ -554,8 +554,8 @@ MonoBehaviour:
   radarBobVerticalAmount: 0.05
   radarReturnToNeutralSpeed: 3
   Sprint: 1
-  _footstepSound1: {fileID: 8300000, guid: df99c190a2ee15f4da76a518031bf123, type: 3}
-  _footstepSound2: {fileID: 8300000, guid: 1fbeae5599d42084c9fba4e30d91979d, type: 3}
+  _footstepSound1: {fileID: 8300000, guid: 230951968d8843f4f99c69d0ed4e2a70, type: 3}
+  _footstepSound2: {fileID: 8300000, guid: cb82b811dd6300a489265264a7198478, type: 3}
   _sprintSound: {fileID: 0}
   _audioSource: {fileID: 7136389953236070824}
   _audioFadeOutDuration: 0.8
