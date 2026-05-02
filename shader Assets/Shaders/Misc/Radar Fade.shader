@@ -54,9 +54,8 @@ Shader "Unlit/Radar Fade"
                     ? fmod(_ElapsedTime, 1.0 / _FadeSpeed)
                     : _ElapsedTime;
 
-                float normalizedT = saturate(t * _FadeSpeed);
-                float alpha = 1.0 - normalizedT;
-                return fixed4(_Color.rgb, alpha * _Color.a);
+                float alpha = exp(-_FadeSpeed * t * 3.0);
+                return fixed4(_Color.rgb, saturate(alpha) * _Color.a);
             }
             ENDCG
         }
