@@ -28,7 +28,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float sprintSpeed = 8f;
     [SerializeField] private float gravity = -9.81f;
     //[SerializeField] private float jumpForce = 5f;
-    
+
     [Header("Camera Settings")]
     [SerializeField] private float mouseSensitivity = 2f;
     [SerializeField] private Transform cameraTransform;
@@ -57,7 +57,8 @@ public class PlayerController : MonoBehaviour
     //private bool isJumping = true;
 
     [Header("Audio Settings")]
-    [SerializeField] private AudioClip _walkingSound;
+    [SerializeField] private AudioClip _footstepSound1;
+    [SerializeField] private AudioClip _footstepSound2;
     [SerializeField] private AudioClip _sprintSound;
     [SerializeField] private AudioSource _audioSource;
     [SerializeField] private float _audioFadeOutDuration = 0.2f;
@@ -94,7 +95,7 @@ public class PlayerController : MonoBehaviour
     void Start()
     {
         characterController = GetComponent<CharacterController>();
-        
+
         // Lock and hide cursor
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
@@ -122,7 +123,7 @@ public class PlayerController : MonoBehaviour
 
         // Auto-assign main camera if not set
 
-        
+
     }
 
     // Raycasting Methods
@@ -344,7 +345,7 @@ public class PlayerController : MonoBehaviour
             float verticalBob = Mathf.Sin(bobTimer * 2f) * radarBobVerticalAmount;
 
             targetBobOffset = new Vector3(horizontalBob, verticalBob, 0f);
-            
+
         }
         else
         {
@@ -393,89 +394,109 @@ public class PlayerController : MonoBehaviour
     }
 
 
-    // Handle walking sound effects
-    private void HandleWalkingSound()
+    // Track which footstep plays next
+    private int _nextFootstep = 0;
+    private Coroutine _footstepCoroutine;
+
+    private bool IsWalking()
     {
-        // Calculate horizontal velocity magnitude (ignore vertical movement)
         float moveX = Input.GetAxisRaw("Horizontal");
         float moveZ = Input.GetAxisRaw("Vertical");
         Vector3 move = transform.right * moveX + transform.forward * moveZ;
-        float movementSpeed = move.magnitude;
+        return move.magnitude >= 0.1f && isGrounded;
+    }
 
-
-        // Play footsteps if player is moving and grounded
-        if (movementSpeed >= 0.1f && isGrounded)
+    private void HandleWalkingSound()
+    {
+        if (IsWalking())
         {
-            // Cancel any ongoing fade out
-            if (_fadeOutCoroutine != null)
+            if (_footstepCoroutine == null && _audioSource != null)
             {
-                StopCoroutine(_fadeOutCoroutine);
-                _fadeOutCoroutine = null;
+                _footstepCoroutine = StartCoroutine(FootstepLoop());
             }
-
-            if (!_isPlayingFootsteps && _audioSource != null && _walkingSound != null)
-            {
-                if (isSprinting && _sprintSound != null)
-                {
-                    _audioSource.clip = _sprintSound;
-                }
-                else
-                {
-                    _audioSource.clip = _walkingSound;
-                }
-                _audioSource.volume = _originalVolume;
-                _audioSource.loop = true;
-                _audioSource.Play();
-                _isPlayingFootsteps = true;
-            }
-            else if (_isPlayingFootsteps && _audioSource != null)
-            {
-                // Ensure volume is at original level when playing
-                _audioSource.volume = _originalVolume;
-
-                // Switch audio clips if sprint state changed while already playing
-                AudioClip targetClip = (isSprinting && _sprintSound != null) ? _sprintSound : _walkingSound;
-                if (_audioSource.clip != targetClip)
-                {
-                    _audioSource.Stop();
-                    _audioSource.clip = targetClip;
-                    _audioSource.Play();
-                }
-            }
-        }
-        else
-        {
-            StopWalkingSound();
         }
     }
 
-    // Stop walking sound with fade out
+    private IEnumerator FootstepLoop()
+    {
+        _isPlayingFootsteps = true;
+        _nextFootstep = 0;
+        _audioSource.volume = _originalVolume;
+
+        while (true)
+        {
+            // Before playing, check if still walking
+            if (!IsWalking())
+                break;
+
+            AudioClip clip = (_nextFootstep == 0) ? _footstepSound1 : _footstepSound2;
+            _nextFootstep = (_nextFootstep + 1) % 2;
+
+            if (clip != null)
+            {
+                _audioSource.volume = _originalVolume;
+                _audioSource.clip = clip;
+                _audioSource.Play();
+
+                // Wait for clip to finish, checking each frame if player stopped
+                float elapsed = 0f;
+                bool stoppedEarly = false;
+                while (elapsed < clip.length)
+                {
+                    elapsed += Time.deltaTime;
+
+                    if (!IsWalking())
+                    {
+                        // Fade out the remainder of the current clip
+                        float remaining = clip.length - elapsed;
+                        float fadeDuration = Mathf.Min(_audioFadeOutDuration, remaining);
+                        float fadeElapsed = 0f;
+                        float startVolume = _audioSource.volume;
+
+                        while (fadeElapsed < fadeDuration)
+                        {
+                            fadeElapsed += Time.deltaTime;
+                            _audioSource.volume = Mathf.Lerp(startVolume, 0f, fadeElapsed / fadeDuration);
+                            yield return null;
+                        }
+
+                        _audioSource.Stop();
+                        _audioSource.volume = _originalVolume;
+                        stoppedEarly = true;
+                        break;
+                    }
+
+                    yield return null;
+                }
+
+                if (stoppedEarly)
+                    break;
+            }
+            else
+            {
+                yield return null;
+            }
+
+            // After clip finishes naturally, check again before playing next
+            if (!IsWalking())
+                break;
+        }
+
+        _audioSource.volume = _originalVolume;
+        _isPlayingFootsteps = false;
+        _footstepCoroutine = null;
+    }
+
     private void StopWalkingSound()
     {
-        if (_isPlayingFootsteps && _audioSource != null && _fadeOutCoroutine == null)
+        // Force-stop for state changes (dialogue, cutscene, etc.)
+        if (_footstepCoroutine != null)
         {
-            _fadeOutCoroutine = StartCoroutine(FadeOutAndStop());
+            StopCoroutine(_footstepCoroutine);
+            _footstepCoroutine = null;
         }
-    }
-
-    // Coroutine to fade out audio volume before stopping
-    private IEnumerator FadeOutAndStop()
-    {
-        float startVolume = _audioSource.volume;
-        float elapsed = 0f;
-
-        while (elapsed < _audioFadeOutDuration)
-        {
-            elapsed += Time.deltaTime;
-            _audioSource.volume = Mathf.Lerp(startVolume, 0f, elapsed / _audioFadeOutDuration);
-            yield return null;
-        }
-
-        _audioSource.volume = 0f;
-        _audioSource.loop = false;
         _audioSource.Stop();
         _audioSource.volume = _originalVolume;
         _isPlayingFootsteps = false;
-        _fadeOutCoroutine = null;
     }
 }

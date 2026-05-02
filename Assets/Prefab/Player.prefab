@@ -554,10 +554,11 @@ MonoBehaviour:
   radarBobVerticalAmount: 0.05
   radarReturnToNeutralSpeed: 3
   Sprint: 1
-  _walkingSound: {fileID: 8300000, guid: cee05cdf9d4c69f4586122114aa2f36b, type: 3}
+  _footstepSound1: {fileID: 8300000, guid: df99c190a2ee15f4da76a518031bf123, type: 3}
+  _footstepSound2: {fileID: 8300000, guid: 1fbeae5599d42084c9fba4e30d91979d, type: 3}
   _sprintSound: {fileID: 0}
   _audioSource: {fileID: 7136389953236070824}
-  _audioFadeOutDuration: 0.05
+  _audioFadeOutDuration: 0.8
   _lineofSightMaxDist: 0
   _raycastStartOffset: {x: 0, y: 0, z: 0}
   playerCamera: {fileID: 0}
