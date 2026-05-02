@@ -4,10 +4,10 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class PlayerController : MonoBehaviour
+public class playerController : MonoBehaviour
 {
-    // Player State Machine
-    public enum PlayerState
+    // player State Machine
+    public enum playerState
     {
         Normal,      // Can move, interact, and enter cutscenes/dialogue
         InDialogue,  // Cannot move camera lerps to npc
@@ -17,9 +17,9 @@ public class PlayerController : MonoBehaviour
 
 
     [Header("State")]
-    [SerializeField] private PlayerState currentState = PlayerState.Normal;
+    [SerializeField] private playerState currentState = playerState.Normal;
     // Public property to get current state
-    public PlayerState CurrentState => currentState;
+    public playerState CurrentState => currentState;
 
     // Tracks the current quest condition
 
@@ -152,7 +152,7 @@ public class PlayerController : MonoBehaviour
         // Update behavior based on current state
         switch (currentState)
         {
-            case PlayerState.Normal:
+            case playerState.Normal:
                 HandleMovement();
                 HandleMouseLook();
                 HandleRadarAnimation();
@@ -160,18 +160,18 @@ public class PlayerController : MonoBehaviour
                 //HandleSprint();
                 break;
 
-            case PlayerState.InDialogue:
+            case playerState.InDialogue:
                 // no movement, camera lerp to npc
                 //StopWalkingSound();
                 //LerpToNPC();
                 break;
 
-            case PlayerState.Cutscene:
+            case playerState.Cutscene:
                 // Camera is controlled by cutscene, no player input
                 //StopWalkingSound();
                 break;
 
-            case PlayerState.Disabled:
+            case playerState.Disabled:
                 // No interactions or movement
                 //StopWalkingSound();
                 break;
@@ -180,7 +180,7 @@ public class PlayerController : MonoBehaviour
     }
 
     // Change the player's state
-    public void SetState(PlayerState newState)
+    public void SetState(playerState newState)
     {
         if (currentState == newState) return;
 
@@ -195,30 +195,30 @@ public class PlayerController : MonoBehaviour
     }
 
     // Called when entering a new state
-    private void OnStateEnter(PlayerState state)
+    private void OnStateEnter(playerState state)
     {
         switch (state)
         {
-            case PlayerState.Normal:
+            case playerState.Normal:
                 Cursor.lockState = CursorLockMode.Locked;
                 Cursor.visible = false;
                 break;
 
-            case PlayerState.InDialogue:
+            case playerState.InDialogue:
                 // Stop any movement
                 velocity = Vector3.zero;
                 isSprinting = false;
                 //StopWalkingSound();
                 break;
 
-            case PlayerState.Cutscene:
+            case playerState.Cutscene:
                 // Stop all movement and store camera state if needed
                 velocity = Vector3.zero;
                 isSprinting = false;
                 //StopWalkingSound();
                 break;
 
-            case PlayerState.Disabled:
+            case playerState.Disabled:
                 // Stop all movement
                 velocity = Vector3.zero;
                 isSprinting = false;
@@ -228,11 +228,11 @@ public class PlayerController : MonoBehaviour
     }
 
     // Called when exiting a state
-    private void OnStateExit(PlayerState state)
+    private void OnStateExit(playerState state)
     {
         switch (state)
         {
-            case PlayerState.InDialogue:
+            case playerState.InDialogue:
                 // Restore camera control to player
                 Cursor.lockState = CursorLockMode.Locked;
                 Cursor.visible = false;
