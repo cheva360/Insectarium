@@ -10,7 +10,12 @@ public class UIController : MonoBehaviour
     public TextMeshProUGUI InteractText;
     public GameObject UIEntryBackingPrefab;
     public GameObject UIEntryParent;
+    public GameObject UIEntryCollectedPrefab;
+    public GameObject UIEntryCollectedParent;
     public int UIEntryCount = 0;
+    public int UICollectedCount = 0;
+
+    private MonoBehaviour _currentInteractable;
 
     void Awake()
     {
@@ -24,23 +29,37 @@ public class UIController : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
-    // Start is called before the first frame update
-    void Start()
+    public void RequestInteractText(MonoBehaviour requester)
     {
-        
+        _currentInteractable = requester;
+        InteractText.text = "[E]";
     }
 
-    //method named interact text
-    public void isInteractingText(bool isInteracting)
+    public void ReleaseInteractText(MonoBehaviour requester)
     {
-        InteractText.text = isInteracting ? "[E]" : "";
+        if (_currentInteractable == requester)
+        {
+            _currentInteractable = null;
+            InteractText.text = "";
+        }
     }
 
     public void AddUIEntry()
     {
         //Instantiate prefab and set parent to UIEntryParent
         Instantiate(UIEntryBackingPrefab, UIEntryParent.transform);
+        UIEntryCount++;
 
+    }
+
+    public void AddCollected()
+    {
+        if (UICollectedCount < UIEntryCount)
+        {
+            Instantiate(UIEntryCollectedPrefab, UIEntryCollectedParent.transform);
+            UICollectedCount++;
+
+        }
     }
 
     // Update is called once per frame

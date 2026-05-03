@@ -1,12 +1,12 @@
 using UnityEngine;
 
-public class Interactable : MonoBehaviour
+public class DoorInteractable : MonoBehaviour
 {
     private float _interactionDistance = 3f;
 
     private void Start()
     {
-        UIController.Instance.AddUIEntry();
+
     }
 
     private bool IsMouseOver()
@@ -29,10 +29,9 @@ public class Interactable : MonoBehaviour
 
             if (Input.GetKeyDown(KeyCode.E))
             {
-                Debug.Log("Interacted with " + gameObject.name);
+                Debug.Log("Interacted with Door");
                 UIController.Instance.ReleaseInteractText(this);
-                UIController.Instance.AddCollected();
-                Destroy(gameObject);
+                //Destroy(gameObject);
             }
         }
         else

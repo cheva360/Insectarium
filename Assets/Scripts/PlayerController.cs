@@ -61,7 +61,6 @@ public class playerController : MonoBehaviour
     [SerializeField] private AudioClip _footstepSound2;
     [SerializeField] private AudioClip _sprintSound;
     [SerializeField] private AudioSource _audioSource;
-    [SerializeField] private float _audioFadeOutDuration = 0.2f;
 
     [Header("Raycast Settings")]
     [SerializeField] private float _lineofSightMaxDist;
@@ -148,6 +147,19 @@ public class playerController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        // Handle focus/unfocus toggle
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
+
+        // Re-lock cursor on click when focused
+        if (Input.GetMouseButtonDown(0) && Application.isFocused)
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+        }
 
         // Update behavior based on current state
         switch (currentState)
@@ -298,17 +310,18 @@ public class playerController : MonoBehaviour
 
     private void HandleMouseLook()
     {
-        // Get mouse input
-        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
-        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
+        if (Cursor.lockState == CursorLockMode.Locked)
+        {
+            float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
+            float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
 
-        // Rotate player horizontally
-        transform.Rotate(Vector3.up * mouseX);
+            transform.Rotate(Vector3.up * mouseX);
 
-        // Rotate camera vertically
-        verticalRotation -= mouseY;
-        verticalRotation = Mathf.Clamp(verticalRotation, -maxLookAngle, maxLookAngle);
-        cameraTransform.localRotation = Quaternion.Euler(verticalRotation, 0f, 0f);
+            verticalRotation -= mouseY;
+            verticalRotation = Mathf.Clamp(verticalRotation, -maxLookAngle, maxLookAngle);
+            cameraTransform.localRotation = Quaternion.Euler(verticalRotation, 0f, 0f);
+        }
+
     }
 
     private void HandleRadarAnimation()
@@ -462,4 +475,7 @@ public class playerController : MonoBehaviour
         _audioSource.Stop();
         _isPlayingFootsteps = false;
     }
+
+    private bool _isGameFocused = true;
+
 }
