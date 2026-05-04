@@ -17,9 +17,9 @@ public class PixelizeRenderFeature : ScriptableRendererFeature
         static readonly int HeightPixelation = Shader.PropertyToID("_HeightPixelation");
         static readonly int ColorPrecision = Shader.PropertyToID("_ColorPrecision");
 
-        public void Setup(ref PixelationSettings settings, ref Material pixelizeMaterial)
+        public void Setup(ref PixelationSettings settings, ref Material pixelizeMaterial, RenderPassEvent passEvent)
         {
-            renderPassEvent = RenderPassEvent.AfterRenderingPostProcessing;
+            renderPassEvent = passEvent;
 
             material = pixelizeMaterial;
             
@@ -76,6 +76,8 @@ public class PixelizeRenderFeature : ScriptableRendererFeature
     PixelationPass pixelPass;
     Material pixelationMaterial;
 
+    public RenderPassEvent pixelizePassEvent = RenderPassEvent.AfterRenderingPostProcessing;
+
     public override void Create()
     {
         pixelPass ??= new PixelationPass();
@@ -103,7 +105,7 @@ public class PixelizeRenderFeature : ScriptableRendererFeature
             }
         }
         
-        pixelPass.Setup(ref settings, ref pixelationMaterial);
+        pixelPass.Setup(ref settings, ref pixelationMaterial, pixelizePassEvent);
 
         // renderingData.cameraData.camera.depthTextureMode =
         //    renderingData.cameraData.camera.depthTextureMode | DepthTextureMode.Depth;

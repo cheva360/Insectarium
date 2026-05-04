@@ -6,6 +6,14 @@ using UnityEngine.UI;
 
 public class playerController : MonoBehaviour
 {
+    public static playerController Instance { get; private set; }
+
+    private void Awake()
+    {
+
+        Instance = this;
+
+    }
     // player State Machine
     public enum playerState
     {
@@ -24,10 +32,10 @@ public class playerController : MonoBehaviour
     // Tracks the current quest condition
 
     [Header("Movement Settings")]
-    [SerializeField] private float moveSpeed = 5f;
+    public float moveSpeed = 3.5f;
     [SerializeField] private float sprintSpeed = 8f;
     [SerializeField] private float gravity = -9.81f;
-    //[SerializeField] private float jumpForce = 5f;
+    private float baseMoveSpeed; // stores the original moveSpeed at start
 
     [Header("Camera Settings")]
     [SerializeField] private float mouseSensitivity = 2f;
@@ -120,9 +128,8 @@ public class playerController : MonoBehaviour
             radarOriginalPosition = radar3DModel.localPosition;
         }
 
-        // Auto-assign main camera if not set
-
-
+        // Store base move speed for bob scaling
+        baseMoveSpeed = moveSpeed;
     }
 
     // Raycasting Methods
@@ -180,7 +187,7 @@ public class playerController : MonoBehaviour
 
             case playerState.Cutscene:
                 // Camera is controlled by cutscene, no player input
-                //StopWalkingSound();
+                //HandleRadarAnimation();
                 break;
 
             case playerState.Disabled:
@@ -214,6 +221,7 @@ public class playerController : MonoBehaviour
             case playerState.Normal:
                 Cursor.lockState = CursorLockMode.Locked;
                 Cursor.visible = false;
+                characterController.enabled = true; // Re-enable character controller if it was disabled in cutscene
                 break;
 
             case playerState.InDialogue:
@@ -225,9 +233,11 @@ public class playerController : MonoBehaviour
 
             case playerState.Cutscene:
                 // Stop all movement and store camera state if needed
+                //disable character controller
+                characterController.enabled = false;
                 velocity = Vector3.zero;
                 isSprinting = false;
-                //StopWalkingSound();
+                StopWalkingSound();
                 break;
 
             case playerState.Disabled:
@@ -349,8 +359,10 @@ public class playerController : MonoBehaviour
 
         if (isMoving)
         {
-            // Increment bob timer
-            float speedMultiplier = isSprinting ? 1.5f : 1f;
+            // Tie bob speed to current movement speed relative to BASE walk speed
+            float currentSpeed = isSprinting ? sprintSpeed : moveSpeed;
+            float speedMultiplier = currentSpeed / baseMoveSpeed;
+
             bobTimer += Time.deltaTime * radarBobFrequency * speedMultiplier;
 
             // Calculate bob offsets using sine waves
@@ -358,7 +370,6 @@ public class playerController : MonoBehaviour
             float verticalBob = Mathf.Sin(bobTimer * 2f) * radarBobVerticalAmount;
 
             targetBobOffset = new Vector3(horizontalBob, verticalBob, 0f);
-
         }
         else
         {
@@ -435,6 +446,8 @@ public class playerController : MonoBehaviour
         _isPlayingFootsteps = true;
         _nextFootstep = 0;
 
+        const float defaultMoveSpeed = 3.5f;
+
         while (true)
         {
             if (!IsWalking())
@@ -448,15 +461,19 @@ public class playerController : MonoBehaviour
                 _audioSource.clip = clip;
                 _audioSource.Play();
 
-                // Wait for the clip to finish naturally — no early stop
-                yield return new WaitForSeconds(clip.length);
+                // At defaultMoveSpeed (5f): extraDelay = 0, so waitTime = clip.length (no added delay)
+                // As moveSpeed decreases, extraDelay grows, slowing footstep rate
+                float currentSpeed = Mathf.Max(moveSpeed, 0.1f);
+                float extraDelay = clip.length * ((defaultMoveSpeed / currentSpeed) - 1f);
+                float waitTime = clip.length + extraDelay;
+
+                yield return new WaitForSeconds(waitTime);
             }
             else
             {
                 yield return null;
             }
 
-            // Clip finished — only continue to next footstep if still walking
             if (!IsWalking())
                 break;
         }

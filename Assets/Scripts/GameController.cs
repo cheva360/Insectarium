@@ -9,6 +9,10 @@ public class GameController : MonoBehaviour
 
     public GameObject player;
     public Transform MinimapTransform;
+    public Transform SpawnLocation;
+    //passing out sound
+    public AudioClip passingOutSound;
+    public AudioSource GameControllerAudioSource;
 
     void Awake()
     {

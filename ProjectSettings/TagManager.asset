@@ -5,6 +5,7 @@ TagManager:
   serializedVersion: 3
   tags:
   - RadarObj
+  - DoorTrigger
   layers:
   - Default
   - TransparentFX
@@ -39,6 +40,9 @@ TagManager:
   - 
   - 
   m_SortingLayers:
+  - name: Fade
+    uniqueID: 1454531933
+    locked: 0
   - name: Default
     uniqueID: 0
     locked: 0

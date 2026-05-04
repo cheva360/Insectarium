@@ -2612,7 +2612,7 @@ Material:
     - _ColorMask: 15
     - _CullMode: 0
     - _Diffuse: 0.5
-    - _FaceDilate: 0
+    - _FaceDilate: 0.01
     - _FaceUVSpeedX: 0
     - _FaceUVSpeedY: 0
     - _GlowInner: 0.05
@@ -2626,7 +2626,7 @@ Material:
     - _MaskSoftnessX: 0
     - _MaskSoftnessY: 0
     - _MaskWipeControl: 0.5
-    - _OutlineSoftness: 0
+    - _OutlineSoftness: 0.09
     - _OutlineUVSpeedX: 0
     - _OutlineUVSpeedY: 0
     - _OutlineWidth: 0.17
@@ -2650,7 +2650,7 @@ Material:
     - _UnderlayDilate: 0.35
     - _UnderlayOffsetX: 0.26
     - _UnderlayOffsetY: -0.2
-    - _UnderlaySoftness: 0
+    - _UnderlaySoftness: 0.29
     - _VertexOffsetX: 0
     - _VertexOffsetY: 0
     - _WeightBold: 0.75
@@ -2666,6 +2666,6 @@ Material:
     - _ReflectFaceColor: {r: 0, g: 0, b: 0, a: 1}
     - _ReflectOutlineColor: {r: 0, g: 0, b: 0, a: 1}
     - _SpecularColor: {r: 1, g: 1, b: 1, a: 1}
-    - _UnderlayColor: {r: 0, g: 0, b: 0, a: 1}
+    - _UnderlayColor: {r: 0.17520213, g: 0.17520213, b: 0.17520213, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

@@ -100,4 +100,5 @@ MonoBehaviour:
   settings:
     widthPixelation: 256
     heightPixelation: 256
-    colorPrecision: 15
+    colorPrecision: 256
+  pixelizePassEvent: 600
