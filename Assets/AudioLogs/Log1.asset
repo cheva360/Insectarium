@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f89a4d56630e09646854a338c8601956, type: 3}
+  m_Name: Log1
+  m_EditorClassIdentifier: Assembly-CSharp::DecoderWordData
+  words:
+  - word: 'April 14th 19[unintelligible] '
+    typewriterDuration: 2.002
+    delayAfterWord: 1.514
+  - word: 'We have finally found it. '
+    typewriterDuration: 1.842
+    delayAfterWord: 1.579
+  - word: "Regenerative capabilities\u2026 "
+    typewriterDuration: 1.834
+    delayAfterWord: 0.608
+  - word: "radiation resistance\u2026 the most robust creature known to science\u2026the
+      perfect subject. "
+    typewriterDuration: 6.835
+    delayAfterWord: 2.339
