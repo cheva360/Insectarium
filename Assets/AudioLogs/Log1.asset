@@ -21,12 +21,18 @@ MonoBehaviour:
     deletionCharsPerStep: 0
     deletionSpeed: 0
   - word: . . . \n
-    typewriterDuration: 4.182
+    typewriterDuration: 4
     delayAfterWord: 0
     deleteCharsBefore: 0
     deletionCharsPerStep: 0
     deletionSpeed: 0
-  - word: 'April 14th 19 '
+  - word: cls
+    typewriterDuration: 0.182
+    delayAfterWord: 0
+    deleteCharsBefore: 0
+    deletionCharsPerStep: 0
+    deletionSpeed: 0
+  - word: 'April 14th 19- '
     typewriterDuration: 1.834
     delayAfterWord: 0
     deleteCharsBefore: -1
@@ -44,14 +50,14 @@ MonoBehaviour:
     deleteCharsBefore: 0
     deletionCharsPerStep: 0
     deletionSpeed: 0
-  - word: "Regenerative capabilities\u2026 "
+  - word: 'Regenerative capabilities. . . '
     typewriterDuration: 1.834
     delayAfterWord: 0.608
     deleteCharsBefore: 0
     deletionCharsPerStep: 0
     deletionSpeed: 0
-  - word: "radiation resistance\u2026 the most robust creature known to science\u2026
-      the perfect subject. "
+  - word: 'radiation resistance. . .  the most robust creature known to science.
+      . .  the perfect subject. '
     typewriterDuration: 6.835
     delayAfterWord: 1.339
     deleteCharsBefore: 0
@@ -82,7 +88,7 @@ MonoBehaviour:
     deleteCharsBefore: 0
     deletionCharsPerStep: 0
     deletionSpeed: 0
-  - word: thanks to...
+  - word: 'thanks to. . . '
     typewriterDuration: 0.765
     delayAfterWord: 1.346
     deleteCharsBefore: 0
