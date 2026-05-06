@@ -26,8 +26,12 @@ public class UIController : MonoBehaviour
 
     private MonoBehaviour _currentInteractable;
     private Coroutine _decoderTypewriterCoroutine;
+    private Coroutine _cursorCoroutine;
+    private bool _isTyping = false;
     private List<string> _committedChunks = new List<string>();
     private string _currentChunk = "";
+
+    public float CursorBlinkRate = 0.5f;
 
     void Awake()
     {
@@ -70,10 +74,13 @@ public class UIController : MonoBehaviour
 
         if (_decoderTypewriterCoroutine != null)
             StopCoroutine(_decoderTypewriterCoroutine);
+        if (_cursorCoroutine != null)
+            StopCoroutine(_cursorCoroutine);
 
         _committedChunks.Clear();
         _currentChunk = "";
         DecoderText.text = "";
+        _isTyping = true;
 
         if (wordData.startAudio != null && DecoderAudioSource != null)
         {
@@ -82,13 +89,28 @@ public class UIController : MonoBehaviour
         }
 
         _decoderTypewriterCoroutine = StartCoroutine(DecoderTypewriterCoroutine(wordData));
+        _cursorCoroutine = StartCoroutine(CursorBlinkCoroutine());
+    }
+
+    private IEnumerator CursorBlinkCoroutine()
+    {
+        bool cursorVisible = false;
+        while (true)
+        {
+            yield return new WaitForSeconds(CursorBlinkRate);
+            if (!_isTyping)
+            {
+                cursorVisible = !cursorVisible;
+                string baseText = string.Join("", _committedChunks);
+                DecoderText.text = baseText + (cursorVisible ? "|" : "");
+            }
+        }
     }
 
     private IEnumerator DecoderTypewriterCoroutine(DecoderWordData wordData)
     {
         foreach (var entry in wordData.words)
         {
-            // Handle deletion before typing
             if (entry.deleteCharsBefore != 0)
             {
                 string committed = string.Join("", _committedChunks);
@@ -97,37 +119,54 @@ public class UIController : MonoBehaviour
                 if (entry.deletionSpeed == -1f)
                 {
                     committed = committed.Substring(0, committed.Length - deleteCount);
+                    _committedChunks.Clear();
+                    if (committed.Length > 0) _committedChunks.Add(committed);
+                    _currentChunk = "";
                     DecoderText.text = committed;
                     DecoderScrollRect.verticalNormalizedPosition = 0f;
                 }
                 else
                 {
                     int remaining = deleteCount;
+                    float deleteTimer = 0f;
                     while (remaining > 0)
                     {
-                        int step = Mathf.Min(entry.deletionCharsPerStep, remaining);
-                        committed = committed.Substring(0, committed.Length - step);
-                        remaining -= step;
+                        deleteTimer += Time.deltaTime;
+                        while (deleteTimer >= entry.deletionSpeed && remaining > 0)
+                        {
+                            int step = Mathf.Min(entry.deletionCharsPerStep, remaining);
+                            committed = committed.Substring(0, committed.Length - step);
+                            remaining -= step;
+                            deleteTimer -= entry.deletionSpeed;
+                        }
+                        _committedChunks.Clear();
+                        if (committed.Length > 0) _committedChunks.Add(committed);
+                        _currentChunk = "";
                         DecoderText.text = committed;
                         DecoderScrollRect.verticalNormalizedPosition = 0f;
-                        yield return new WaitForSeconds(entry.deletionSpeed);
+                        yield return null;
                     }
                 }
-
-                _committedChunks.Clear();
-                if (committed.Length > 0)
-                    _committedChunks.Add(committed);
             }
 
-            // Type out the new word
             _currentChunk = entry.word;
+            int revealedChars = 0;
+            float elapsed = 0f;
             float delayPerChar = entry.word.Length > 0 ? entry.typewriterDuration / entry.word.Length : 0f;
 
-            for (int i = 1; i <= _currentChunk.Length; i++)
+            while (revealedChars < _currentChunk.Length)
             {
-                DecoderText.text = string.Join("", _committedChunks) + _currentChunk.Substring(0, i);
-                DecoderScrollRect.verticalNormalizedPosition = 0f;
-                yield return new WaitForSeconds(delayPerChar);
+                elapsed += Time.deltaTime;
+                int targetChars = delayPerChar > 0 ? Mathf.Min(Mathf.FloorToInt(elapsed / delayPerChar), _currentChunk.Length) : _currentChunk.Length;
+
+                if (targetChars > revealedChars)
+                {
+                    revealedChars = targetChars;
+                    DecoderText.text = string.Join("", _committedChunks) + _currentChunk.Substring(0, revealedChars);
+                    DecoderScrollRect.verticalNormalizedPosition = 0f;
+                }
+
+                yield return null;
             }
 
             yield return new WaitForSeconds(entry.delayAfterWord);
