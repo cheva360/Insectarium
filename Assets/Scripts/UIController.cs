@@ -12,6 +12,7 @@ public class UIController : MonoBehaviour
 
     public TextMeshProUGUI InteractText;
     public TextMeshProUGUI DecoderText;
+    public ScrollRect DecoderScrollRect;
     public Image Fade;
     public Volume PostProcessingVolume;
     public GameObject UIEntryBackingPrefab;
@@ -21,18 +22,16 @@ public class UIController : MonoBehaviour
     public int UIEntryCount = 0;
     public int UICollectedCount = 0;
     public float ShakeMagnitude = 0f;
+    public AudioSource DecoderAudioSource;
 
     private MonoBehaviour _currentInteractable;
     private Coroutine _decoderTypewriterCoroutine;
-
     private List<string> _committedChunks = new List<string>();
     private string _currentChunk = "";
-    private float _originalHeight;
 
     void Awake()
     {
         Instance = this;
-        _originalHeight = DecoderText.rectTransform.sizeDelta.y;
     }
 
     public void RequestInteractText(MonoBehaviour requester)
@@ -75,13 +74,12 @@ public class UIController : MonoBehaviour
         _committedChunks.Clear();
         _currentChunk = "";
         DecoderText.text = "";
-        DecoderText.maxVisibleCharacters = 0;
 
-        // Reset rect height
-        DecoderText.rectTransform.sizeDelta = new Vector2(
-            DecoderText.rectTransform.sizeDelta.x,
-            _originalHeight
-        );
+        if (wordData.startAudio != null && DecoderAudioSource != null)
+        {
+            DecoderAudioSource.clip = wordData.startAudio;
+            DecoderAudioSource.Play();
+        }
 
         _decoderTypewriterCoroutine = StartCoroutine(DecoderTypewriterCoroutine(wordData));
     }
@@ -90,21 +88,45 @@ public class UIController : MonoBehaviour
     {
         foreach (var entry in wordData.words)
         {
+            // Handle deletion before typing
+            if (entry.deleteCharsBefore != 0)
+            {
+                string committed = string.Join("", _committedChunks);
+                int deleteCount = entry.deleteCharsBefore == -1 ? committed.Length : Mathf.Min(entry.deleteCharsBefore, committed.Length);
+
+                if (entry.deletionSpeed == -1f)
+                {
+                    committed = committed.Substring(0, committed.Length - deleteCount);
+                    DecoderText.text = committed;
+                    DecoderScrollRect.verticalNormalizedPosition = 0f;
+                }
+                else
+                {
+                    int remaining = deleteCount;
+                    while (remaining > 0)
+                    {
+                        int step = Mathf.Min(entry.deletionCharsPerStep, remaining);
+                        committed = committed.Substring(0, committed.Length - step);
+                        remaining -= step;
+                        DecoderText.text = committed;
+                        DecoderScrollRect.verticalNormalizedPosition = 0f;
+                        yield return new WaitForSeconds(entry.deletionSpeed);
+                    }
+                }
+
+                _committedChunks.Clear();
+                if (committed.Length > 0)
+                    _committedChunks.Add(committed);
+            }
+
+            // Type out the new word
             _currentChunk = entry.word;
-
-            DecoderText.text = BuildFullText();
-            DecoderText.maxVisibleCharacters = GetCommittedLength();
-
             float delayPerChar = entry.word.Length > 0 ? entry.typewriterDuration / entry.word.Length : 0f;
 
             for (int i = 1; i <= _currentChunk.Length; i++)
             {
-                int visible = GetCommittedLength() + i;
-                DecoderText.maxVisibleCharacters = visible;
-
-                // Pass exact visible count so we only measure what's been typed
-                GrowRectToFit(visible);
-
+                DecoderText.text = string.Join("", _committedChunks) + _currentChunk.Substring(0, i);
+                DecoderScrollRect.verticalNormalizedPosition = 0f;
                 yield return new WaitForSeconds(delayPerChar);
             }
 
@@ -115,83 +137,6 @@ public class UIController : MonoBehaviour
         }
 
         _decoderTypewriterCoroutine = null;
-    }
-
-    private void GrowRectToFit()
-    {
-        DecoderText.ForceMeshUpdate();
-
-        if (DecoderText.textInfo.pageCount <= 1)
-            return;
-
-        float lineHeight = 0f;
-        if (DecoderText.textInfo.lineCount > 0)
-        {
-            TMP_LineInfo line = DecoderText.textInfo.lineInfo[0];
-            lineHeight = line.ascender - line.descender;
-        }
-
-        if (lineHeight <= 0f)
-            return;
-
-        // Grow by exactly one line — called per character so this naturally catches up
-        DecoderText.rectTransform.offsetMax = new Vector2(
-            DecoderText.rectTransform.offsetMax.x,
-            DecoderText.rectTransform.offsetMax.y + lineHeight
-        );
-    }
-
-    private void GrowRectToFit(int visibleCharCount)
-    {
-        // Temporarily set text to only what has been revealed so far
-        string fullText = DecoderText.text;
-        int fullMax = DecoderText.maxVisibleCharacters;
-
-        string visibleText = fullText.Length >= visibleCharCount
-            ? fullText.Substring(0, visibleCharCount)
-            : fullText;
-
-        DecoderText.text = visibleText;
-        DecoderText.maxVisibleCharacters = int.MaxValue;
-        DecoderText.ForceMeshUpdate();
-
-        bool overflows = DecoderText.textInfo.pageCount > 1;
-
-        float lineHeight = 0f;
-        if (DecoderText.textInfo.lineCount > 0)
-        {
-            TMP_LineInfo line = DecoderText.textInfo.lineInfo[0];
-            lineHeight = line.ascender - line.descender;
-        }
-
-        // Restore full text and visible count for correct word wrapping
-        DecoderText.text = fullText;
-        DecoderText.maxVisibleCharacters = fullMax;
-
-        if (overflows && lineHeight > 0f)
-        {
-            DecoderText.rectTransform.offsetMax = new Vector2(
-                DecoderText.rectTransform.offsetMax.x,
-                DecoderText.rectTransform.offsetMax.y + lineHeight
-            );
-        }
-    }
-
-    private string BuildFullText()
-    {
-        if (_committedChunks.Count == 0)
-            return _currentChunk;
-
-        return string.Join("\n", _committedChunks)
-               + (_currentChunk.Length > 0 ? "\n" + _currentChunk : "");
-    }
-
-    private int GetCommittedLength()
-    {
-        int total = 0;
-        foreach (var chunk in _committedChunks)
-            total += chunk.Length + 1; // +1 for \n separator
-        return total;
     }
 
     void Update()

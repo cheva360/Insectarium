@@ -12,17 +12,97 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f89a4d56630e09646854a338c8601956, type: 3}
   m_Name: Log1
   m_EditorClassIdentifier: Assembly-CSharp::DecoderWordData
+  startAudio: {fileID: 8300000, guid: a449f1c22f6d84f44ad5e97c05dfbb75, type: 3}
   words:
-  - word: 'April 14th 19[unintelligible] '
-    typewriterDuration: 2.002
+  - word: 'AudioLog1: '
+    typewriterDuration: 0
+    delayAfterWord: 3.9
+    deleteCharsBefore: 0
+    deletionCharsPerStep: 0
+    deletionSpeed: 0
+  - word: . . . \n
+    typewriterDuration: 4.182
+    delayAfterWord: 0
+    deleteCharsBefore: 0
+    deletionCharsPerStep: 0
+    deletionSpeed: 0
+  - word: 'April 14th 19 '
+    typewriterDuration: 1.834
+    delayAfterWord: 0
+    deleteCharsBefore: -1
+    deletionCharsPerStep: 1
+    deletionSpeed: 0
+  - word: '[unintelligible] '
+    typewriterDuration: 0
     delayAfterWord: 1.514
+    deleteCharsBefore: 0
+    deletionCharsPerStep: 0
+    deletionSpeed: 0
   - word: 'We have finally found it. '
     typewriterDuration: 1.842
     delayAfterWord: 1.579
+    deleteCharsBefore: 0
+    deletionCharsPerStep: 0
+    deletionSpeed: 0
   - word: "Regenerative capabilities\u2026 "
     typewriterDuration: 1.834
     delayAfterWord: 0.608
-  - word: "radiation resistance\u2026 the most robust creature known to science\u2026the
-      perfect subject. "
+    deleteCharsBefore: 0
+    deletionCharsPerStep: 0
+    deletionSpeed: 0
+  - word: "radiation resistance\u2026 the most robust creature known to science\u2026
+      the perfect subject. "
     typewriterDuration: 6.835
-    delayAfterWord: 2.339
+    delayAfterWord: 1.339
+    deleteCharsBefore: 0
+    deletionCharsPerStep: 0
+    deletionSpeed: 0
+  - word: 'With [unintelligible] as the focus of our research, our progress is sure
+      to be '
+    typewriterDuration: 4.068
+    delayAfterWord: 0
+    deleteCharsBefore: 0
+    deletionCharsPerStep: 0
+    deletionSpeed: 0
+  - word: 'exponential. '
+    typewriterDuration: 1.551
+    delayAfterWord: 0.78
+    deleteCharsBefore: 0
+    deletionCharsPerStep: 0
+    deletionSpeed: 0
+  - word: '[unintelligible] '
+    typewriterDuration: 0.771
+    delayAfterWord: 0
+    deleteCharsBefore: 0
+    deletionCharsPerStep: 0
+    deletionSpeed: 0
+  - word: 'is in reach, '
+    typewriterDuration: 1.514
+    delayAfterWord: 0
+    deleteCharsBefore: 0
+    deletionCharsPerStep: 0
+    deletionSpeed: 0
+  - word: thanks to...
+    typewriterDuration: 0.765
+    delayAfterWord: 1.346
+    deleteCharsBefore: 0
+    deletionCharsPerStep: 0
+    deletionSpeed: 0
+  - word: the cockroach.
+    typewriterDuration: 1.702
+    delayAfterWord: 5.488
+    deleteCharsBefore: 0
+    deletionCharsPerStep: 0
+    deletionSpeed: 0
+  - word: \n
+    typewriterDuration: 0.5
+    delayAfterWord: 0
+    deleteCharsBefore: 0
+    deletionCharsPerStep: 0
+    deletionSpeed: 0
+  - word: 
+    typewriterDuration: 0
+    delayAfterWord: 0
+    deleteCharsBefore: -1
+    deletionCharsPerStep: 5
+    deletionSpeed: 0
