@@ -1920,8 +1920,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1535149031}
   m_HandleRect: {fileID: 1535149030}
   m_Direction: 2
-  m_Value: 1
-  m_Size: 0.9999969
+  m_Value: 0
+  m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -3522,7 +3522,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 280.6713, y: -0.007867813}
+  m_AnchoredPosition: {x: 280.6713, y: -0.004693985}
   m_SizeDelta: {x: 119.9, y: 0}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &1965541908
@@ -4216,6 +4216,11 @@ PrefabInstance:
     - target: {fileID: 9060378767457350780, guid: 8eb6acd3240438f45b0d87c30ea59cc7,
         type: 3}
       propertyPath: m_VolumeLayerMask.m_Bits
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 9150279839077630166, guid: 8eb6acd3240438f45b0d87c30ea59cc7,
+        type: 3}
+      propertyPath: weight
       value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []

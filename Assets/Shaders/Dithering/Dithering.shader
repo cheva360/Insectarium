@@ -2,38 +2,24 @@ Shader "Custom/Dithering"
 {
     Properties
     {
-        [MainColor] _BaseColor("Base Color", Color) = (1,1,1,1)
-        [MainTexture] _BaseMap("Base Map", 2D) = "white" {}
         _Steps ("Steps", Integer) = 16
         _RenderScale ("Render Scale", Float) = 1.0
     }
     
     HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+        #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
 
         TEXTURE2D(_BaseMap);
         SAMPLER(sampler_BaseMap);
+        
+        int _Steps;
+        float _RenderScale;
 
         CBUFFER_START(UnityPerMaterial)
             float4 _BaseMap_ST;
             float2 _BaseMap_TexelSize;
-
-            int _Steps;
-            float _RenderScale;
         CBUFFER_END
-
-        struct Attributes
-        {
-            float4 positionOS : POSITION;
-            float2 uv : TEXCOORD0;
-        };
-
-        struct Varyings
-        {
-            float4 positionHCS : SV_POSITION;
-            float2 uv : TEXCOORD0;
-            float4 screenPosition : TEXCOORD1;
-        };
 
         half3 GammaToLinearSpace (half3 sRGB)
         {
@@ -89,31 +75,23 @@ Shader "Custom/Dithering"
           return bayer_matrix_8x8[pixelPosition.x % 8][pixelPosition.y % 8];
         }
 
-        float4 Bayer4x4_float(float4 PixelPosition, float4 Color, float Steps, float RenderScale)
+        float4 Bayer4x4_float(float2 PixelPosition, float4 Color, float Steps, float RenderScale)
         {
-          PixelPosition.xy *= _ScreenParams.xy * RenderScale;
+          PixelPosition *= _ScreenParams.xy * RenderScale;
 
-          float bayerValue = GetBayer4x4(PixelPosition.xy);
+          float bayerValue = GetBayer8x8(PixelPosition.xy);
           float4 outputBayer = step(bayerValue, Color);
 
           Color = Posterize(Color, Steps, bayerValue);
           return Color;
         }
-        
-        Varyings vert(Attributes IN)
-        {
-            Varyings OUT;
-            OUT.positionHCS = TransformObjectToHClip(IN.positionOS.xyz);
-            OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
-            OUT.screenPosition = GetVertexPositionInputs(OUT.positionHCS).positionNDC;
-            return OUT;
-        }
 
-        half4 frag(Varyings IN) : SV_Target
+        half4 Frag(Varyings IN) : SV_Target
         {
-            half4 color = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv);
+            float2 uv = IN.texcoord.xy;
+            half4 color = SAMPLE_TEXTURE2D_X_LOD(_BlitTexture, sampler_LinearRepeat, uv, _BlitMipLevel);
 
-            float4 bayer_col = Bayer4x4_float(IN.screenPosition, color, _Steps, _RenderScale);
+            float4 bayer_col = Bayer4x4_float(uv, color, _Steps, _RenderScale);
             
             return bayer_col;
         }
@@ -126,8 +104,8 @@ Shader "Custom/Dithering"
         Pass
         {
             HLSLPROGRAM
-                #pragma vertex vert
-                #pragma fragment frag
+                #pragma vertex Vert
+                #pragma fragment Frag
             ENDHLSL
         }
     }

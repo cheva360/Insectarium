@@ -17,9 +17,9 @@ public class PixelizeRenderFeature : ScriptableRendererFeature
         static readonly int HeightPixelation = Shader.PropertyToID("_HeightPixelation");
         static readonly int ColorPrecision = Shader.PropertyToID("_ColorPrecision");
 
-        public void Setup(ref PixelationSettings settings, ref Material pixelizeMaterial, RenderPassEvent passEvent)
+        public void Setup(ref PixelationSettings settings, ref Material pixelizeMaterial)
         {
-            renderPassEvent = passEvent;
+            renderPassEvent = settings.pixelizePassEvent;
 
             material = pixelizeMaterial;
             
@@ -29,18 +29,14 @@ public class PixelizeRenderFeature : ScriptableRendererFeature
             material.SetFloat(HeightPixelation, settings.heightPixelation);
             material.SetFloat(ColorPrecision, settings.colorPrecision);
         }
-
-        // This class stores the data needed by the RenderGraph pass.
-        // It is passed as a parameter to the delegate function that executes the RenderGraph pass.
         private class PassData{}
 
-        // RecordRenderGraph is where the RenderGraph handle can be accessed, through which render passes can be added to the graph.
         public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
         {
-            var stack = VolumeManager.instance.stack;
-            pixelation = stack.GetComponent<PixelationVolumeComponent>();
-            if (!pixelation.IsActive())
-                return;
+            //var stack = VolumeManager.instance.stack;
+            //pixelation = stack.GetComponent<PixelationVolumeComponent>();
+            //if (!pixelation.IsActive())
+            //    return;
 
             var resourceData = frameData.Get<UniversalResourceData>();
 
@@ -63,24 +59,89 @@ public class PixelizeRenderFeature : ScriptableRendererFeature
         }
     }
 
+    class DitherPass : ScriptableRenderPass
+    {
+        Material material;
+        
+        static readonly int Steps = Shader.PropertyToID("_Steps");
+        static readonly int RenderScale = Shader.PropertyToID("_RenderScale");
+        
+        public void Setup(ref DitherSettings settings, ref Material ditherMaterial)
+        {
+            renderPassEvent = settings.ditherPassEvent;
+
+            material = ditherMaterial;
+            
+            requiresIntermediateTexture = true;
+            
+            material.SetInteger(Steps, settings.steps);
+            material.SetFloat(RenderScale, settings.render_scale);
+        }
+        
+        public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
+        {
+            //var stack = VolumeManager.instance.stack;
+            //pixelation = stack.GetComponent<PixelationVolumeComponent>();
+            //if (!pixelation.IsActive())
+            //    return;
+
+            var resourceData = frameData.Get<UniversalResourceData>();
+
+            if (resourceData.isActiveTargetBackBuffer)
+            {
+                Debug.LogError("ditherRenderFeature requires intermediate texture");
+            }
+
+            var source = resourceData.activeColorTexture;
+
+            var destinationDesc = renderGraph.GetTextureDesc(source);
+            destinationDesc.clearBuffer = false;
+
+            TextureHandle destination = renderGraph.CreateTexture(destinationDesc);
+
+            RenderGraphUtils.BlitMaterialParameters para = new(source, destination, material, 0);
+            renderGraph.AddBlitPass(para, passName: "Dither Pass");
+
+            resourceData.cameraColor = destination;
+        }
+    }
+
     [Serializable]
     public class PixelationSettings
     {
+        public bool pixelize = true;
         public float widthPixelation = 512;
         public float heightPixelation = 512;
         public float colorPrecision = 32.0f;
+        
+        public RenderPassEvent pixelizePassEvent = RenderPassEvent.AfterRenderingPostProcessing;
+    }
+    [Serializable]
+    public class DitherSettings
+    {
+        public bool dither = true;
+        public int steps = 16;
+        public float render_scale = 1.0f;
+        
+        public RenderPassEvent ditherPassEvent = RenderPassEvent.AfterRenderingPostProcessing;
     }
 
     [SerializeField]
-    PixelationSettings settings;
+    PixelationSettings pixelSettings;
+    [SerializeField]
+    DitherSettings ditherSettings;
+    
     PixelationPass pixelPass;
     Material pixelationMaterial;
 
-    public RenderPassEvent pixelizePassEvent = RenderPassEvent.AfterRenderingPostProcessing;
+    private DitherPass ditherPass;
+    private Material ditherMaterial;
+
 
     public override void Create()
     {
         pixelPass ??= new PixelationPass();
+        ditherPass ??= new DitherPass();
     }
 
     // Here you can inject one or multiple render passes in the renderer.
@@ -88,29 +149,43 @@ public class PixelizeRenderFeature : ScriptableRendererFeature
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
     {
         
-        if (pixelationMaterial == null)
+        if (pixelationMaterial == null || ditherMaterial == null)
         {
-            var shader = Shader.Find("Custom/Pixelation");
-            if (shader == null)
+            var pixel_shader = Shader.Find("Custom/Pixelation");
+            if (pixel_shader == null)
             {
-                Debug.LogError("Shader not found");
+                Debug.LogError("Pixelation shader not found");
+                return;
+            }
+
+            var dither_shader = Shader.Find("Custom/Dithering");
+            if (dither_shader == null)
+            {
+                Debug.LogError("Dither shader not found");
                 return;
             }
             
-            pixelationMaterial = CoreUtils.CreateEngineMaterial(shader);
-            if (pixelationMaterial ==null)
+            pixelationMaterial = CoreUtils.CreateEngineMaterial(pixel_shader);
+            ditherMaterial = CoreUtils.CreateEngineMaterial(dither_shader);
+            if (pixelationMaterial ==null || ditherMaterial == null)
             {
                 Debug.LogWarning("Not all required materials could be created. Outlines will not render.");
                 return;
             }
         }
         
-        pixelPass.Setup(ref settings, ref pixelationMaterial, pixelizePassEvent);
+        pixelPass.Setup(ref pixelSettings, ref pixelationMaterial);
+        ditherPass.Setup(ref ditherSettings, ref ditherMaterial);
 
         // renderingData.cameraData.camera.depthTextureMode =
         //    renderingData.cameraData.camera.depthTextureMode | DepthTextureMode.Depth;
         
-        renderer.EnqueuePass(pixelPass);
+        
+        if (pixelSettings.pixelize)
+            renderer.EnqueuePass(pixelPass);
+        if (ditherSettings.dither)
+            renderer.EnqueuePass(ditherPass);
+        
     }
 }
 
