@@ -294,15 +294,9 @@ MonoBehaviour:
   m_Name: PixelationVolumeComponent
   m_EditorClassIdentifier: Assembly-CSharp::PixelationVolumeComponent
   active: 1
-  widthPixelation:
+  intensity:
     m_OverrideState: 1
-    m_Value: 512
-  heightPixelation:
-    m_OverrideState: 1
-    m_Value: 512
-  colorPrecision:
-    m_OverrideState: 1
-    m_Value: 32
+    m_Value: 0
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0

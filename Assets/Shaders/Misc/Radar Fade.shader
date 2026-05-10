@@ -2,7 +2,7 @@ Shader "Unlit/Radar Fade"
 {
     Properties
     {
-        _Color ("Dot Color", Color) = (0, 1, 0, 1)
+        _Color ("Dot Color", Color) = (0.5443218, 0.8301887, 0.5443218, 1)
         _FadeSpeed ("Fade Speed", Float) = 1.0
         _ElapsedTime ("Elapsed Time", Float) = 0.0
         _Repeating ("Repeating", Range(0.0, 1.0)) = 0

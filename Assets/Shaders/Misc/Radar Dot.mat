@@ -33,6 +33,6 @@ Material:
     - _FadeSpeed: 1
     - _Repeating: 0
     m_Colors:
-    - _Color: {r: 0.69803923, g: 0.8980392, b: 0.69803923, a: 1}
+    - _Color: {r: 0.4708971, g: 0.6981132, b: 0.4708971, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
