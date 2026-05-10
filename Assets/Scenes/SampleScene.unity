@@ -3349,31 +3349,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Player
       objectReference: {fileID: 0}
-    - target: {fileID: 4297048956580219207, guid: 8eb6acd3240438f45b0d87c30ea59cc7,
-        type: 3}
-      propertyPath: m_Cookie
-      value: 
-      objectReference: {fileID: 2800000, guid: ed33a8ab14a4f92499158264aebf89d9, type: 3}
-    - target: {fileID: 4297048956580219207, guid: 8eb6acd3240438f45b0d87c30ea59cc7,
-        type: 3}
-      propertyPath: m_Enabled
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 4297048956580219207, guid: 8eb6acd3240438f45b0d87c30ea59cc7,
-        type: 3}
-      propertyPath: m_SpotAngle
-      value: 179
-      objectReference: {fileID: 0}
-    - target: {fileID: 4297048956580219207, guid: 8eb6acd3240438f45b0d87c30ea59cc7,
-        type: 3}
-      propertyPath: m_InnerSpotAngle
-      value: 68.47402
-      objectReference: {fileID: 0}
-    - target: {fileID: 8009830181050752265, guid: 8eb6acd3240438f45b0d87c30ea59cc7,
-        type: 3}
-      propertyPath: m_Enabled
-      value: 1
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
