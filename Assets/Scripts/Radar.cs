@@ -10,8 +10,8 @@ public class Radar : MonoBehaviour
     [SerializeField] private GameObject RadarPingParent;
     [SerializeField] private float maxRadarDistance = 50f;
     [SerializeField] private AudioClip radarPingSound;
-    [SerializeField] private float sweepWidth = 2f;      // Horizontal half-extent of the sweep wall
-    [SerializeField] private float sweepHeight = 10f;    // Vertical half-extent of the sweep wall (tall wall)
+    [SerializeField] private float sweepWidth = 2f;
+    [SerializeField] private float sweepHeight = 10f;
 
     private float radarLineRotation = 0f;
     private float radarSweepAngle = 0f;
@@ -20,33 +20,49 @@ public class Radar : MonoBehaviour
     private AudioSource audioSource;
     private bool soundPlayedThisFrame = false;
 
+    [SerializeField] private float rotationSpeed = 30f; // degrees per second
+    [SerializeField] private int targetFPS = 30;        // radar line update rate
+
     void Start()
     {
         audioSource = GetComponent<AudioSource>();
         if (audioSource == null)
             audioSource = gameObject.AddComponent<AudioSource>();
+
+        StartCoroutine(RadarLineRotationCoroutine());
+    }
+
+    private IEnumerator RadarLineRotationCoroutine()
+    {
+        float interval = 1f / targetFPS;
+        float degreesPerTick = rotationSpeed * interval;
+
+        while (true)
+        {
+            yield return new WaitForSeconds(interval);
+
+            soundPlayedThisFrame = false;
+
+            radarLineRotation -= degreesPerTick;
+            radarSweepAngle += degreesPerTick;
+
+            if (radarSweepAngle >= 360f)
+            {
+                radarSweepAngle -= 360f;
+                lastDetectionAngle.Clear();
+            }
+
+            RadarLine.transform.localRotation = Quaternion.Euler(
+                RadarLine.transform.localEulerAngles.x,
+                RadarLine.transform.localEulerAngles.y,
+                radarLineRotation);
+
+            PerformRadarSweep();
+        }
     }
 
     void Update()
     {
-        soundPlayedThisFrame = false;
-
-        radarLineRotation -= 30f * Time.deltaTime;
-        radarSweepAngle += 30f * Time.deltaTime;
-
-        if (radarSweepAngle >= 360f)
-        {
-            radarSweepAngle -= 360f;
-            lastDetectionAngle.Clear();
-        }
-
-        RadarLine.transform.localRotation = Quaternion.Euler(
-            RadarLine.transform.localEulerAngles.x,
-            RadarLine.transform.localEulerAngles.y,
-            radarLineRotation);
-
-        PerformRadarSweep();
-
         MinimapRotate.transform.rotation = Quaternion.Euler(
             MinimapRotate.eulerAngles.x,
             MinimapRotate.eulerAngles.y,
@@ -61,7 +77,6 @@ public class Radar : MonoBehaviour
 
         Vector3 origin = GameController.Instance.player.transform.position;
 
-        // Half-extents: thin along sweep direction (0.1), wide in height (sweepHeight), wide sideways (sweepWidth)
         Vector3 halfExtents = new Vector3(sweepWidth, sweepHeight, 0.1f);
 
         RaycastHit[] hits = Physics.BoxCastAll(
@@ -134,7 +149,6 @@ public class Radar : MonoBehaviour
         Gizmos.color = Color.cyan;
         Gizmos.DrawLine(playerPos, playerPos + sweepDirection * maxRadarDistance);
 
-        // Visualize the tall wall box at mid-range
         Gizmos.color = Color.blue;
         Gizmos.matrix = Matrix4x4.TRS(
             playerPos + sweepDirection * (maxRadarDistance * 0.5f),
