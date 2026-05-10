@@ -3,6 +3,7 @@ using UnityEngine;
 public class Decoder : MonoBehaviour
 {
     private float _interactionDistance = 3f;
+    private float _lookAtRadius = 0.1f; // tolerance radius for close-range detection
 
     [Tooltip("Assign one of the 8 DecoderWordData scriptable objects here.")]
     public DecoderWordData wordData;
@@ -12,10 +13,10 @@ public class Decoder : MonoBehaviour
 
     }
 
-    private bool IsMouseOver()
+    private bool IsLookingAt()
     {
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        if (Physics.Raycast(ray, out RaycastHit hit))
+        Ray ray = Camera.main.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+        if (Physics.SphereCast(ray, _lookAtRadius, out RaycastHit hit, _interactionDistance))
         {
             return hit.collider != null && hit.collider.gameObject == gameObject;
         }
@@ -26,7 +27,7 @@ public class Decoder : MonoBehaviour
     {
         bool inRange = Vector3.Distance(transform.position, GameController.Instance.player.transform.position) <= _interactionDistance;
 
-        if (inRange && IsMouseOver())
+        if (inRange && IsLookingAt())
         {
             UIController.Instance.RequestInteractText(this);
 
@@ -38,7 +39,6 @@ public class Decoder : MonoBehaviour
                 {
                     Debug.Log("Interacted with Decoder");
                     UIController.Instance.ReleaseInteractText(this);
-                    //UIController.Instance.PlayDecoderTypewriter(wordData);
                 }
             }
         }

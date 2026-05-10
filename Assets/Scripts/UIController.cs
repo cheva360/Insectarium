@@ -180,7 +180,7 @@ public class UIController : MonoBehaviour
 
     void Update()
     {
-        Camera.main.transform.localPosition = new Vector3(0, 0.24f, 0);
+        Camera.main.transform.localPosition = new Vector3(0, 0.85f, 0);
         Vector3 shakeOffset = Random.insideUnitCircle * ShakeMagnitude;
         Camera.main.transform.localPosition += new Vector3(shakeOffset.x, shakeOffset.y, 0);
     }

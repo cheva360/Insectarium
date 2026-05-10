@@ -3,16 +3,17 @@ using UnityEngine;
 public class Interactable : MonoBehaviour
 {
     private float _interactionDistance = 3f;
+    private float _lookAtRadius = 0.1f;
 
     private void Start()
     {
         UIController.Instance.AddUIEntry();
     }
 
-    private bool IsMouseOver()
+    private bool IsLookingAt()
     {
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        if (Physics.Raycast(ray, out RaycastHit hit))
+        Ray ray = Camera.main.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+        if (Physics.SphereCast(ray, _lookAtRadius, out RaycastHit hit, _interactionDistance))
         {
             return hit.collider != null && hit.collider.gameObject == gameObject;
         }
@@ -23,7 +24,7 @@ public class Interactable : MonoBehaviour
     {
         bool inRange = Vector3.Distance(transform.position, GameController.Instance.player.transform.position) <= _interactionDistance;
 
-        if (inRange && IsMouseOver())
+        if (inRange && IsLookingAt())
         {
             UIController.Instance.RequestInteractText(this);
 
