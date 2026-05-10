@@ -98,13 +98,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PixelizeRenderFeature
   m_Active: 1
   pixelSettings:
-    pixelize: 0
-    widthPixelation: 512
-    heightPixelation: 512
+    pixelize: 1
+    widthPixelation: 256
+    heightPixelation: 256
     colorPrecision: 32
     pixelizePassEvent: 600
   ditherSettings:
     dither: 1
-    steps: 3
-    render_scale: 1
+    steps: 10
+    render_scale: 0.5
     ditherPassEvent: 600
