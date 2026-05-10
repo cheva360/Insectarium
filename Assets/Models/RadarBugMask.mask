@@ -1,0 +1,113 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!319 &31900000
+AvatarMask:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: RadarBugMask
+  m_Mask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+  m_Elements:
+  - m_Path: 
+    m_Weight: 1
+  - m_Path: antennae
+    m_Weight: 0
+  - m_Path: arm
+    m_Weight: 0
+  - m_Path: body
+    m_Weight: 0
+  - m_Path: casetteTape
+    m_Weight: 0
+  - m_Path: head
+    m_Weight: 0
+  - m_Path: legs
+    m_Weight: 0
+  - m_Path: RadarBug
+    m_Weight: 0
+  - m_Path: RadarBug/arm2
+    m_Weight: 0
+  - m_Path: RadarBug/arm2/arm1
+    m_Weight: 1
+  - m_Path: RadarBug/arm2/arm1/wrist
+    m_Weight: 1
+  - m_Path: RadarBug/arm2/arm1/wrist/hand
+    m_Weight: 1
+  - m_Path: RadarBug/arm2/arm1/wrist/hand/index1
+    m_Weight: 1
+  - m_Path: RadarBug/arm2/arm1/wrist/hand/index1/index2
+    m_Weight: 1
+  - m_Path: RadarBug/arm2/arm1/wrist/hand/index1/index2/index2_end
+    m_Weight: 1
+  - m_Path: RadarBug/arm2/arm1/wrist/hand/middle1
+    m_Weight: 1
+  - m_Path: RadarBug/arm2/arm1/wrist/hand/middle1/middle2
+    m_Weight: 1
+  - m_Path: RadarBug/arm2/arm1/wrist/hand/middle1/middle2/middle2_end
+    m_Weight: 1
+  - m_Path: RadarBug/arm2/arm1/wrist/hand/pinky1
+    m_Weight: 1
+  - m_Path: RadarBug/arm2/arm1/wrist/hand/pinky1/pinky2
+    m_Weight: 1
+  - m_Path: RadarBug/arm2/arm1/wrist/hand/pinky1/pinky2/pinky2_end
+    m_Weight: 1
+  - m_Path: RadarBug/arm2/arm1/wrist/hand/ring1
+    m_Weight: 1
+  - m_Path: RadarBug/arm2/arm1/wrist/hand/ring1/ring2
+    m_Weight: 1
+  - m_Path: RadarBug/arm2/arm1/wrist/hand/ring1/ring2/ring2_end
+    m_Weight: 1
+  - m_Path: RadarBug/arm2/arm1/wrist/hand/thumb1
+    m_Weight: 1
+  - m_Path: RadarBug/arm2/arm1/wrist/hand/thumb1/thumb2
+    m_Weight: 1
+  - m_Path: RadarBug/arm2/arm1/wrist/hand/thumb1/thumb2/thumb2_end
+    m_Weight: 1
+  - m_Path: RadarBug/Bone.014
+    m_Weight: 1
+  - m_Path: RadarBug/Bone.014/Bone.014_end
+    m_Weight: 1
+  - m_Path: RadarBug/Bone.015
+    m_Weight: 1
+  - m_Path: RadarBug/Bone.015/Bone.015_end
+    m_Weight: 1
+  - m_Path: RadarBug/Bone.016
+    m_Weight: 1
+  - m_Path: RadarBug/Bone.016/Bone.017
+    m_Weight: 1
+  - m_Path: RadarBug/Bone.016/Bone.017/Bone.017_end
+    m_Weight: 1
+  - m_Path: RadarBug/Bone.018
+    m_Weight: 1
+  - m_Path: RadarBug/Bone.018/Bone.019
+    m_Weight: 1
+  - m_Path: RadarBug/Bone.018/Bone.019/Bone.019_end
+    m_Weight: 1
+  - m_Path: RadarBug/Bone.020
+    m_Weight: 1
+  - m_Path: RadarBug/Bone.020/Bone.021
+    m_Weight: 1
+  - m_Path: RadarBug/Bone.020/Bone.021/Bone.021_end
+    m_Weight: 1
+  - m_Path: RadarBug/Bone.022
+    m_Weight: 1
+  - m_Path: RadarBug/Bone.022/Bone.023
+    m_Weight: 1
+  - m_Path: RadarBug/Bone.022/Bone.023/Bone.023_end
+    m_Weight: 1
+  - m_Path: RadarBug/Bone.024
+    m_Weight: 1
+  - m_Path: RadarBug/Bone.024/Bone.025
+    m_Weight: 1
+  - m_Path: RadarBug/Bone.024/Bone.025/Bone.025_end
+    m_Weight: 1
+  - m_Path: RadarBug/Bone.026
+    m_Weight: 1
+  - m_Path: RadarBug/Bone.026/Bone.027
+    m_Weight: 1
+  - m_Path: RadarBug/Bone.026/Bone.027/Bone.027_end
+    m_Weight: 1
+  - m_Path: RadarBug/Bone.028
+    m_Weight: 0
+  - m_Path: RadarBug/Bone.028/Bone.028_end
+    m_Weight: 1
