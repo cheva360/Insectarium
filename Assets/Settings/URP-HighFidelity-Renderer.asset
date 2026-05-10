@@ -101,7 +101,7 @@ MonoBehaviour:
     pixelize: 1
     widthPixelation: 256
     heightPixelation: 256
-    colorPrecision: 64
+    colorPrecision: 32
     pixelizePassEvent: 600
   ditherSettings:
     dither: 1
