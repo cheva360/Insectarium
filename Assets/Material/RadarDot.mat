@@ -103,6 +103,7 @@ Material:
     - _DstBlend: 10
     - _DstBlendAlpha: 10
     - _ElapsedTime: 0
+    - _EmissionIntensity: 150.87
     - _EnvironmentReflections: 1
     - _FadeSpeed: 1
     - _GlossMapScale: 0
