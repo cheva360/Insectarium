@@ -33,10 +33,10 @@ public class PixelizeRenderFeature : ScriptableRendererFeature
 
         public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
         {
-            //var stack = VolumeManager.instance.stack;
-            //pixelation = stack.GetComponent<PixelationVolumeComponent>();
-            //if (!pixelation.IsActive())
-            //    return;
+            var stack = VolumeManager.instance.stack;
+            pixelation = stack.GetComponent<PixelationVolumeComponent>();
+            if (!pixelation.IsActive())
+                return;
 
             var resourceData = frameData.Get<UniversalResourceData>();
 
@@ -63,6 +63,7 @@ public class PixelizeRenderFeature : ScriptableRendererFeature
     {
         Material material;
         
+        
         static readonly int Steps = Shader.PropertyToID("_Steps");
         static readonly int RenderScale = Shader.PropertyToID("_RenderScale");
         
@@ -80,10 +81,10 @@ public class PixelizeRenderFeature : ScriptableRendererFeature
         
         public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
         {
-            //var stack = VolumeManager.instance.stack;
-            //pixelation = stack.GetComponent<PixelationVolumeComponent>();
-            //if (!pixelation.IsActive())
-            //    return;
+            var stack = VolumeManager.instance.stack;
+            var pixelation = stack.GetComponent<PixelationVolumeComponent>();
+            if (!pixelation.IsActive())
+                return;
 
             var resourceData = frameData.Get<UniversalResourceData>();
 

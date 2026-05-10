@@ -1,10 +1,11 @@
-Shader "Custom/VertexSnapping"
+Shader "Custom/ObjectEffects"
 {
     Properties
     {
         [MainColor] _BaseColor("Base Color", Color) = (1, 1, 1, 1)
         [MainTexture] _BaseMap("Base Map", 2D) = "white" {}
-        _SnapIntensity ("Snap Intensity", Range(0.001,0.05)) = 0.1
+        _SnapIntensity ("Snap Intensity", Range(0.001,0.05)) = 0.0066
+        _AffineOn ("Affine Mapping On", Range(0,1)) = 1
     }
 
     SubShader
@@ -40,6 +41,7 @@ Shader "Custom/VertexSnapping"
                 half4 _BaseColor;
                 float4 _BaseMap_ST;
                 float _SnapIntensity;
+                float _AffineOn;
             CBUFFER_END
 
             float2 snapToGrid(float2 value, float snapValue) {
@@ -59,7 +61,8 @@ Shader "Custom/VertexSnapping"
                 OUT.positionHCS.xy = screenPos * OUT.positionHCS.w;
 
                 OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
-
+                if (_AffineOn)
+                    OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap) * OUT.positionHCS.w;
                 
                 return OUT;
             }
@@ -67,6 +70,10 @@ Shader "Custom/VertexSnapping"
             half4 frag(Varyings IN) : SV_Target
             {
                 half4 color = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv) * _BaseColor;
+                if (_AffineOn)
+                    color = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv / IN.positionHCS.w) * _BaseColor;
+                    
+                
                 return color;
             }
             ENDHLSL

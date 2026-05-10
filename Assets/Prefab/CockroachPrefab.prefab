@@ -45,10 +45,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 80596f062602c814290bbd3e0b0fa533, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LargeCockroach
-  cockroachColor: 0
-  brownMat: {fileID: 2100000, guid: 46507fc72c2cacb4ea88c05f7c031be7, type: 2}
-  greenMat: {fileID: 2100000, guid: 4bdb7e8eddc759246a25deece913c8ff, type: 2}
-  purpleMat: {fileID: 2100000, guid: f11e0f660455a514e86555c2c52c2e9f, type: 2}
+  cockroachColor: 2
+  brownMat: {fileID: 2100000, guid: fadde34f03c1ac5ea91d9ea6245e0813, type: 2}
+  greenMat: {fileID: 2100000, guid: 555b9ced5c8141c60b3a35c35c67d256, type: 2}
+  purpleMat: {fileID: 2100000, guid: 786c93f7d3bc76e1aad8ea1b7c304753, type: 2}
   renderers:
   - {fileID: 6153479325504501501}
   - {fileID: 8714133476308583727}
@@ -111,11 +111,26 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -1206874426333947015, guid: e503ad3e875a45740a68dfd5e414b582,
+        type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 786c93f7d3bc76e1aad8ea1b7c304753, type: 2}
     - target: {fileID: 919132149155446097, guid: e503ad3e875a45740a68dfd5e414b582,
         type: 3}
       propertyPath: m_Name
       value: cockroach
       objectReference: {fileID: 0}
+    - target: {fileID: 5738923373294698888, guid: e503ad3e875a45740a68dfd5e414b582,
+        type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 786c93f7d3bc76e1aad8ea1b7c304753, type: 2}
+    - target: {fileID: 7075047833148830298, guid: e503ad3e875a45740a68dfd5e414b582,
+        type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 786c93f7d3bc76e1aad8ea1b7c304753, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
