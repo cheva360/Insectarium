@@ -262,7 +262,7 @@ Light:
   m_Intensity: 3.16
   m_Range: 0.6
   m_SpotAngle: 179
-  m_InnerSpotAngle: 0
+  m_InnerSpotAngle: 68.47402
   m_CookieSize2D: {x: 0.5, y: 0.5}
   m_Shadows:
     m_Type: 0
@@ -290,7 +290,7 @@ Light:
       e32: 0
       e33: 1
     m_UseCullingMatrixOverride: 0
-  m_Cookie: {fileID: 0}
+  m_Cookie: {fileID: 2800000, guid: ed33a8ab14a4f92499158264aebf89d9, type: 3}
   m_DrawHalo: 0
   m_Flare: {fileID: 0}
   m_RenderMode: 0
