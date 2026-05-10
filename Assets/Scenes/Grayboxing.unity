@@ -148,8 +148,8 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 3.93, z: 0}
-  m_LocalScale: {x: 15, y: 10, z: 15}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 10.99, y: 7.326667, z: 10.99}
+  m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 2130960789}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -1320,7 +1320,7 @@ GameObject:
   - component: {fileID: 82821324}
   m_Layer: 0
   m_Name: AT5 - Radar Bug
-  m_TagString: Untagged
+  m_TagString: RadarObj
   m_Icon: {fileID: -1412012063857583412, guid: 0000000000000000d000000000000000, type: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -1688,7 +1688,7 @@ GameObject:
   - component: {fileID: 132500124}
   m_Layer: 0
   m_Name: AT3
-  m_TagString: Untagged
+  m_TagString: RadarObj
   m_Icon: {fileID: -1412012063857583412, guid: 0000000000000000d000000000000000, type: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -3124,7 +3124,7 @@ GameObject:
   - component: {fileID: 264519131}
   m_Layer: 0
   m_Name: AT8
-  m_TagString: Untagged
+  m_TagString: RadarObj
   m_Icon: {fileID: -1412012063857583412, guid: 0000000000000000d000000000000000, type: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -4258,7 +4258,7 @@ GameObject:
   - component: {fileID: 353546852}
   m_Layer: 0
   m_Name: AT9 - Chase
-  m_TagString: Untagged
+  m_TagString: RadarObj
   m_Icon: {fileID: -1412012063857583412, guid: 0000000000000000d000000000000000, type: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -5948,7 +5948,7 @@ GameObject:
   - component: {fileID: 711658157}
   m_Layer: 0
   m_Name: AT6
-  m_TagString: Untagged
+  m_TagString: RadarObj
   m_Icon: {fileID: -1412012063857583412, guid: 0000000000000000d000000000000000, type: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -5962,7 +5962,7 @@ Transform:
   m_GameObject: {fileID: 711658155}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -13.577393, y: 0.9300008, z: 65.04703}
+  m_LocalPosition: {x: -45.577393, y: 0.9300008, z: 56.047028}
   m_LocalScale: {x: 1.51, y: 1.51, z: 1.51}
   m_ConstrainProportionsScale: 1
   m_Children: []
@@ -6061,7 +6061,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &719993911
 Transform:
   m_ObjectHideFlags: 0
@@ -7237,7 +7237,7 @@ GameObject:
   - component: {fileID: 808777341}
   m_Layer: 0
   m_Name: AT2
-  m_TagString: Untagged
+  m_TagString: RadarObj
   m_Icon: {fileID: -1412012063857583412, guid: 0000000000000000d000000000000000, type: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -10345,7 +10345,7 @@ GameObject:
   - component: {fileID: 1296057582}
   m_Layer: 0
   m_Name: AT4
-  m_TagString: Untagged
+  m_TagString: RadarObj
   m_Icon: {fileID: -1412012063857583412, guid: 0000000000000000d000000000000000, type: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -12224,7 +12224,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &1343184541
 Transform:
   m_ObjectHideFlags: 0
@@ -15321,7 +15321,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 12.46489, y: 0.58999, z: -5.19844}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 1, y: 0.05, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1343184541}
@@ -15664,7 +15664,7 @@ GameObject:
   - component: {fileID: 1748249179}
   m_Layer: 0
   m_Name: AT7
-  m_TagString: Untagged
+  m_TagString: RadarObj
   m_Icon: {fileID: -1412012063857583412, guid: 0000000000000000d000000000000000, type: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -17320,7 +17320,7 @@ GameObject:
   - component: {fileID: 2011127778}
   m_Layer: 0
   m_Name: AT1
-  m_TagString: Untagged
+  m_TagString: RadarObj
   m_Icon: {fileID: -1412012063857583412, guid: 0000000000000000d000000000000000, type: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
