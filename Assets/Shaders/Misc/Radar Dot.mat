@@ -30,9 +30,11 @@ Material:
     m_Ints: []
     m_Floats:
     - _ElapsedTime: 0
+    - _EmissionIntensity: 4
     - _FadeSpeed: 1
     - _Repeating: 0
     m_Colors:
-    - _Color: {r: 0.4708971, g: 0.6981132, b: 0.4708971, a: 1}
+    - _Color: {r: 0.18841398, g: 0.30458212, b: 0.19866411, a: 1}
+    - _EmissionColor: {r: 0.29936934, g: 0.52021563, b: 0.31514406, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
