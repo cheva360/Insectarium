@@ -19,6 +19,7 @@ public class LargeCockroach : MonoBehaviour
     void OnValidate()
     {
 
+
         switch (cockroachColor)
         {
             case CockroachColor.Brown:
