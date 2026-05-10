@@ -101,10 +101,10 @@ MonoBehaviour:
     pixelize: 1
     widthPixelation: 256
     heightPixelation: 256
-    colorPrecision: 32
+    colorPrecision: 64
     pixelizePassEvent: 600
   ditherSettings:
     dither: 1
-    steps: 10
+    steps: 29
     render_scale: 0.5
     ditherPassEvent: 600
