@@ -15,6 +15,7 @@ public class Radar : MonoBehaviour
 
     private float radarLineRotation = 0f;
     private float radarSweepAngle = 0f;
+    private Quaternion radarLineBaseRotation;
     private Dictionary<Collider, float> lastDetectionAngle = new Dictionary<Collider, float>();
     [SerializeField] private float redetectionAngle = 90f;
     private AudioSource audioSource;
@@ -28,6 +29,8 @@ public class Radar : MonoBehaviour
         audioSource = GetComponent<AudioSource>();
         if (audioSource == null)
             audioSource = gameObject.AddComponent<AudioSource>();
+
+        radarLineBaseRotation = RadarLine.transform.localRotation;
 
         StartCoroutine(RadarLineRotationCoroutine());
     }
@@ -52,10 +55,7 @@ public class Radar : MonoBehaviour
                 lastDetectionAngle.Clear();
             }
 
-            RadarLine.transform.localRotation = Quaternion.Euler(
-                RadarLine.transform.localEulerAngles.x,
-                RadarLine.transform.localEulerAngles.y,
-                radarLineRotation);
+            RadarLine.transform.localRotation = radarLineBaseRotation * Quaternion.AngleAxis(-radarLineRotation, Vector3.right);
 
             PerformRadarSweep();
         }
