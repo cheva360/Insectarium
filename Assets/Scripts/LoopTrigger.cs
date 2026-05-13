@@ -4,7 +4,7 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
 
-public class DoorInteractable : MonoBehaviour
+public class LoopTrigger : MonoBehaviour
 {
     private bool _coroutineStarted = false;
 
@@ -145,6 +145,11 @@ public class DoorInteractable : MonoBehaviour
             yield return null;
 
         }
+
+        // Advance loop count (caps at Three)
+        if (GameController.Instance.CurrentLoop < GameController.LoopCount.Three)
+            GameController.Instance.CurrentLoop = (GameController.LoopCount)(GameController.Instance.CurrentLoop + 1);
+
         _coroutineStarted = false;
     }
 }

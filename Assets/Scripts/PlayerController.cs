@@ -51,6 +51,7 @@ public class playerController : MonoBehaviour
     [SerializeField] private float radarBobHorizontalAmount = 0.02f;
     [SerializeField] private float radarBobVerticalAmount = 0.03f;
     [SerializeField] private float radarReturnToNeutralSpeed = 3f;
+    [SerializeField] private float radarUpdateFPS = 12f; // Low framerate for radar updates
 
 
     //[Header("Sprint Settings")]
@@ -92,6 +93,7 @@ public class playerController : MonoBehaviour
     private float radarSwayVelocity = 0f;
     private float bobTimer = 0f;
     private Vector3 currentBobOffset = Vector3.zero;
+    private float radarUpdateAccumulator = 0f; // Accumulator for low-FPS radar update
 
     // Audio fade variables
     private Coroutine _fadeOutCoroutine;
@@ -338,6 +340,17 @@ public class playerController : MonoBehaviour
     {
         if (radar3DModel == null) return;
 
+        // Accumulate time and only update radar at the target low framerate
+        float radarDeltaTime = 1f / Mathf.Max(radarUpdateFPS, 1f);
+        radarUpdateAccumulator += Time.deltaTime;
+
+        if (radarUpdateAccumulator < radarDeltaTime)
+            return;
+
+        // Use the accumulated time as our simulated delta for this tick
+        float tickDelta = radarUpdateAccumulator;
+        radarUpdateAccumulator = 0f;
+
         // Get mouse input for sway
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
 
@@ -345,10 +358,10 @@ public class playerController : MonoBehaviour
         float targetSwayOffset = -mouseX * radarSwayAmount;
 
         // Use SmoothDamp for buttery smooth sway with velocity-based damping
-        radarSwayOffset = Mathf.SmoothDamp(radarSwayOffset, targetSwayOffset, ref radarSwayVelocity, 1f / radarSwaySmooth, Mathf.Infinity, Time.deltaTime);
+        radarSwayOffset = Mathf.SmoothDamp(radarSwayOffset, targetSwayOffset, ref radarSwayVelocity, 1f / radarSwaySmooth, Mathf.Infinity, tickDelta);
 
         // Apply additional damping to return to center when no input
-        radarSwayOffset = Mathf.Lerp(radarSwayOffset, 0f, radarSwayDamping * Time.deltaTime);
+        radarSwayOffset = Mathf.Lerp(radarSwayOffset, 0f, radarSwayDamping * tickDelta);
 
         // Check if player is moving
         float moveX = Input.GetAxisRaw("Horizontal");
@@ -359,13 +372,11 @@ public class playerController : MonoBehaviour
 
         if (isMoving)
         {
-            // Tie bob speed to current movement speed relative to BASE walk speed
             float currentSpeed = isSprinting ? sprintSpeed : moveSpeed;
             float speedMultiplier = currentSpeed / baseMoveSpeed;
 
-            bobTimer += Time.deltaTime * radarBobFrequency * speedMultiplier;
+            bobTimer += tickDelta * radarBobFrequency * speedMultiplier;
 
-            // Calculate bob offsets using sine waves
             float horizontalBob = Mathf.Sin(bobTimer) * radarBobHorizontalAmount;
             float verticalBob = Mathf.Sin(bobTimer * 2f) * radarBobVerticalAmount;
 
@@ -373,14 +384,13 @@ public class playerController : MonoBehaviour
         }
         else
         {
-            // Slowly reset bob timer when not moving to avoid sudden jumps
-            bobTimer = Mathf.Lerp(bobTimer, 0f, radarReturnToNeutralSpeed * Time.deltaTime);
+            bobTimer = Mathf.Lerp(bobTimer, 0f, radarReturnToNeutralSpeed * tickDelta);
         }
 
-        // Smoothly lerp current bob offset towards target (includes returning to zero)
-        currentBobOffset = Vector3.Lerp(currentBobOffset, targetBobOffset, radarReturnToNeutralSpeed * Time.deltaTime);
+        // Smoothly lerp current bob offset towards target
+        currentBobOffset = Vector3.Lerp(currentBobOffset, targetBobOffset, radarReturnToNeutralSpeed * tickDelta);
 
-        // Combine all offsets: original position + sway (X) + bob (X, Y)
+        // Combine all offsets and apply
         Vector3 swayOffset = new Vector3(radarSwayOffset, 0f, 0f);
         radar3DModel.localPosition = radarOriginalPosition + swayOffset + currentBobOffset;
     }
