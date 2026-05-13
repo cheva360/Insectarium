@@ -23,13 +23,10 @@ public class playerController : MonoBehaviour
         Disabled     // no movement or interactions
     }
 
-
     [Header("State")]
     [SerializeField] private playerState currentState = playerState.Normal;
     // Public property to get current state
     public playerState CurrentState => currentState;
-
-    // Tracks the current quest condition
 
     [Header("Movement Settings")]
     public float moveSpeed = 3.5f;
@@ -93,7 +90,8 @@ public class playerController : MonoBehaviour
     private float radarSwayVelocity = 0f;
     private float bobTimer = 0f;
     private Vector3 currentBobOffset = Vector3.zero;
-    private float radarUpdateAccumulator = 0f; // Accumulator for low-FPS radar update
+    private float radarUpdateAccumulator = 0f;  // Accumulator for low-FPS radar update
+    private float _accumulatedMouseX = 0f;       // Collects mouse input between radar ticks
 
     // Audio fade variables
     private Coroutine _fadeOutCoroutine;
@@ -138,19 +136,13 @@ public class playerController : MonoBehaviour
     // Vector setting Ray start position to camera's world space position
     private Vector3 _raycastStart
     {
-        get
-        {
-            return cameraTransform.position;
-        }
+        get { return cameraTransform.position; }
     }
 
     // Vector pointing out from camera
     private Vector3 _raycastDir
     {
-        get
-        {
-            return (cameraTransform.forward).normalized;
-        }
+        get { return (cameraTransform.forward).normalized; }
     }
 
     // Update is called once per frame
@@ -235,7 +227,7 @@ public class playerController : MonoBehaviour
 
             case playerState.Cutscene:
                 // Stop all movement and store camera state if needed
-                //disable character controller
+                // Disable character controller
                 characterController.enabled = false;
                 velocity = Vector3.zero;
                 isSprinting = false;
@@ -340,27 +332,30 @@ public class playerController : MonoBehaviour
     {
         if (radar3DModel == null) return;
 
-        // Accumulate time and only update radar at the target low framerate
+        // Always accumulate mouse input every frame so no input is lost between ticks
+        _accumulatedMouseX += Input.GetAxis("Mouse X") * mouseSensitivity;
+
+        // Accumulate time and only update radar position at the target low framerate
         float radarDeltaTime = 1f / Mathf.Max(radarUpdateFPS, 1f);
         radarUpdateAccumulator += Time.deltaTime;
 
         if (radarUpdateAccumulator < radarDeltaTime)
             return;
 
-        // Use the accumulated time as our simulated delta for this tick
         float tickDelta = radarUpdateAccumulator;
         radarUpdateAccumulator = 0f;
 
-        // Get mouse input for sway
-        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
+        // Consume accumulated mouse input for this tick, then reset it
+        float mouseX = _accumulatedMouseX;
+        _accumulatedMouseX = 0f;
 
-        // Calculate target sway offset based on horizontal camera movement
+        // Calculate target sway offset based on total horizontal mouse movement since last tick
         float targetSwayOffset = -mouseX * radarSwayAmount;
 
-        // Use SmoothDamp for buttery smooth sway with velocity-based damping
+        // SmoothDamp towards target sway
         radarSwayOffset = Mathf.SmoothDamp(radarSwayOffset, targetSwayOffset, ref radarSwayVelocity, 1f / radarSwaySmooth, Mathf.Infinity, tickDelta);
 
-        // Apply additional damping to return to center when no input
+        // Damp back to center when no input
         radarSwayOffset = Mathf.Lerp(radarSwayOffset, 0f, radarSwayDamping * tickDelta);
 
         // Check if player is moving
@@ -471,7 +466,7 @@ public class playerController : MonoBehaviour
                 _audioSource.clip = clip;
                 _audioSource.Play();
 
-                // At defaultMoveSpeed (5f): extraDelay = 0, so waitTime = clip.length (no added delay)
+                // At defaultMoveSpeed (3.5f): extraDelay = 0, so waitTime = clip.length (no added delay)
                 // As moveSpeed decreases, extraDelay grows, slowing footstep rate
                 float currentSpeed = Mathf.Max(moveSpeed, 0.1f);
                 float extraDelay = clip.length * ((defaultMoveSpeed / currentSpeed) - 1f);

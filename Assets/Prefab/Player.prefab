@@ -697,13 +697,14 @@ MonoBehaviour:
   cameraTransform: {fileID: 8170081054901454619}
   maxLookAngle: 80
   radar3DModel: {fileID: 7601837805063131349}
-  radarSwayAmount: 0.08
+  radarSwayAmount: 0.005
   radarSwaySmooth: 5
   radarSwayDamping: 5
   radarBobFrequency: 5
   radarBobHorizontalAmount: 0.02
   radarBobVerticalAmount: 0.05
   radarReturnToNeutralSpeed: 3
+  radarUpdateFPS: 12
   Sprint: 1
   _footstepSound1: {fileID: 8300000, guid: 230951968d8843f4f99c69d0ed4e2a70, type: 3}
   _footstepSound2: {fileID: 8300000, guid: cb82b811dd6300a489265264a7198478, type: 3}
@@ -1109,7 +1110,7 @@ Transform:
   m_GameObject: {fileID: 4516144678415673035}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0.019720916, z: 0, w: 0.99980557}
-  m_LocalPosition: {x: -0.03, y: -0.02, z: 0}
+  m_LocalPosition: {x: 0.012, y: -0.02, z: -0.002}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
