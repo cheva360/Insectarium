@@ -1386,7 +1386,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: a7051bf7b31a5544aa8cebf072a00130, type: 2}
+  - {fileID: 2100000, guid: 53985df0a1e00fc4b966cfab97f5831e, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1654,6 +1654,7 @@ GameObject:
   - component: {fileID: 132500126}
   - component: {fileID: 132500125}
   - component: {fileID: 132500124}
+  - component: {fileID: 132500127}
   m_Layer: 0
   m_Name: AT3
   m_TagString: RadarObj
@@ -1754,6 +1755,18 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 132500122}
   m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &132500127
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 132500122}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd0db152437e1184bb04e8de39004e02, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Interactable
 --- !u!43 &222329983
 Mesh:
   m_ObjectHideFlags: 0
@@ -3095,6 +3108,7 @@ GameObject:
   - component: {fileID: 264519133}
   - component: {fileID: 264519132}
   - component: {fileID: 264519131}
+  - component: {fileID: 264519134}
   m_Layer: 0
   m_Name: AT8
   m_TagString: RadarObj
@@ -3195,6 +3209,18 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 264519129}
   m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &264519134
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 264519129}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd0db152437e1184bb04e8de39004e02, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Interactable
 --- !u!1 &275969415
 GameObject:
   m_ObjectHideFlags: 0
@@ -3993,7 +4019,7 @@ Transform:
   m_GameObject: {fileID: 353546850}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 14.422607, y: 0.9300008, z: 26.047028}
+  m_LocalPosition: {x: 19.422604, y: 0.9300008, z: 47.047028}
   m_LocalScale: {x: 1.51, y: 1.51, z: 1.51}
   m_ConstrainProportionsScale: 1
   m_Children: []
@@ -4045,7 +4071,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: a7051bf7b31a5544aa8cebf072a00130, type: 2}
+  - {fileID: 2100000, guid: 53985df0a1e00fc4b966cfab97f5831e, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -5539,6 +5565,7 @@ GameObject:
   - component: {fileID: 711658159}
   - component: {fileID: 711658158}
   - component: {fileID: 711658157}
+  - component: {fileID: 711658160}
   m_Layer: 0
   m_Name: AT6
   m_TagString: RadarObj
@@ -5639,6 +5666,18 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 711658155}
   m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &711658160
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 711658155}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd0db152437e1184bb04e8de39004e02, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Interactable
 --- !u!1 &719993910
 GameObject:
   m_ObjectHideFlags: 0
@@ -5664,7 +5703,7 @@ Transform:
   m_GameObject: {fileID: 719993910}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 34.5976, y: 7.41001, z: -74.9866}
+  m_LocalPosition: {x: 34.5976, y: 67.41001, z: -74.9866}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -6834,6 +6873,7 @@ GameObject:
   - component: {fileID: 808777343}
   - component: {fileID: 808777342}
   - component: {fileID: 808777341}
+  - component: {fileID: 808777344}
   m_Layer: 0
   m_Name: AT2
   m_TagString: RadarObj
@@ -6934,6 +6974,18 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 808777339}
   m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &808777344
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 808777339}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd0db152437e1184bb04e8de39004e02, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Interactable
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -8176,7 +8228,7 @@ Transform:
   m_GameObject: {fileID: 917560062}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 34.5976, y: 7.41001, z: -74.9866}
+  m_LocalPosition: {x: 34.5976, y: 27.41001, z: -74.9866}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -10048,6 +10100,7 @@ GameObject:
   - component: {fileID: 1296057584}
   - component: {fileID: 1296057583}
   - component: {fileID: 1296057582}
+  - component: {fileID: 1296057585}
   m_Layer: 0
   m_Name: AT4
   m_TagString: RadarObj
@@ -10148,6 +10201,18 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1296057580}
   m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &1296057585
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1296057580}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd0db152437e1184bb04e8de39004e02, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Interactable
 --- !u!1 &1318816603
 GameObject:
   m_ObjectHideFlags: 0
@@ -14471,7 +14536,7 @@ PrefabInstance:
     - target: {fileID: 1622964461773334578, guid: 8eb6acd3240438f45b0d87c30ea59cc7,
         type: 3}
       propertyPath: m_LocalPosition.x
-      value: 1.1900047
+      value: 47.300667
       objectReference: {fileID: 0}
     - target: {fileID: 1622964461773334578, guid: 8eb6acd3240438f45b0d87c30ea59cc7,
         type: 3}
@@ -14481,7 +14546,7 @@ PrefabInstance:
     - target: {fileID: 1622964461773334578, guid: 8eb6acd3240438f45b0d87c30ea59cc7,
         type: 3}
       propertyPath: m_LocalPosition.z
-      value: -25.19
+      value: -90.54141
       objectReference: {fileID: 0}
     - target: {fileID: 1622964461773334578, guid: 8eb6acd3240438f45b0d87c30ea59cc7,
         type: 3}
@@ -14565,7 +14630,7 @@ Transform:
   m_GameObject: {fileID: 1591094245}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 12.46489, y: 0.58999, z: -5.19844}
+  m_LocalPosition: {x: 12.46489, y: -1.26, z: -5.19844}
   m_LocalScale: {x: 1, y: 0.05, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -14904,6 +14969,7 @@ GameObject:
   - component: {fileID: 1748249181}
   - component: {fileID: 1748249180}
   - component: {fileID: 1748249179}
+  - component: {fileID: 1748249182}
   m_Layer: 0
   m_Name: AT7
   m_TagString: RadarObj
@@ -15004,6 +15070,18 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1748249177}
   m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &1748249182
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1748249177}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd0db152437e1184bb04e8de39004e02, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Interactable
 --- !u!1 &1753798761
 GameObject:
   m_ObjectHideFlags: 0
@@ -16181,6 +16259,7 @@ GameObject:
   - component: {fileID: 1940392093}
   - component: {fileID: 1940392092}
   - component: {fileID: 1940392091}
+  - component: {fileID: 1940392094}
   m_Layer: 0
   m_Name: entry
   m_TagString: Untagged
@@ -16281,6 +16360,18 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1940392089}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &1940392094
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1940392089}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 88d4d163d648d3843b23b54cef202c2c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TutorialDoor
 --- !u!1 &2008957201
 GameObject:
   m_ObjectHideFlags: 0
@@ -16594,6 +16685,7 @@ GameObject:
   - component: {fileID: 2011127780}
   - component: {fileID: 2011127779}
   - component: {fileID: 2011127778}
+  - component: {fileID: 2011127782}
   m_Layer: 0
   m_Name: AT1
   m_TagString: RadarObj
@@ -16694,6 +16786,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1343184541}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2011127782
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2011127777}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd0db152437e1184bb04e8de39004e02, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Interactable
 --- !u!1 &2031546065
 GameObject:
   m_ObjectHideFlags: 0
@@ -19411,23 +19515,33 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 207966023975523502, guid: 2c68ff2b4378f374784530e186dd2c10,
         type: 3}
+      propertyPath: m_LocalScale.x
+      value: 4.68756
+      objectReference: {fileID: 0}
+    - target: {fileID: 207966023975523502, guid: 2c68ff2b4378f374784530e186dd2c10,
+        type: 3}
+      propertyPath: m_LocalScale.z
+      value: 1.4854695
+      objectReference: {fileID: 0}
+    - target: {fileID: 207966023975523502, guid: 2c68ff2b4378f374784530e186dd2c10,
+        type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.21499862
+      value: -0.64
       objectReference: {fileID: 0}
     - target: {fileID: 207966023975523502, guid: 2c68ff2b4378f374784530e186dd2c10,
         type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.33929378
+      value: 1.12
       objectReference: {fileID: 0}
     - target: {fileID: 207966023975523502, guid: 2c68ff2b4378f374784530e186dd2c10,
         type: 3}
       propertyPath: m_LocalPosition.z
-      value: -34.25
+      value: -3.17
       objectReference: {fileID: 0}
     - target: {fileID: 207966023975523502, guid: 2c68ff2b4378f374784530e186dd2c10,
         type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.99145097
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 207966023975523502, guid: 2c68ff2b4378f374784530e186dd2c10,
         type: 3}
@@ -19437,7 +19551,7 @@ PrefabInstance:
     - target: {fileID: 207966023975523502, guid: 2c68ff2b4378f374784530e186dd2c10,
         type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0.13048002
+      value: 0.00014463719
       objectReference: {fileID: 0}
     - target: {fileID: 207966023975523502, guid: 2c68ff2b4378f374784530e186dd2c10,
         type: 3}
@@ -19452,7 +19566,7 @@ PrefabInstance:
     - target: {fileID: 207966023975523502, guid: 2c68ff2b4378f374784530e186dd2c10,
         type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
-      value: -14.995
+      value: 0.017
       objectReference: {fileID: 0}
     - target: {fileID: 207966023975523502, guid: 2c68ff2b4378f374784530e186dd2c10,
         type: 3}
