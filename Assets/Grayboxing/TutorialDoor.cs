@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 public class TutorialDoor : MonoBehaviour
@@ -6,15 +7,26 @@ public class TutorialDoor : MonoBehaviour
 
     [SerializeField] private GameObject TutorialTape;
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        
-    }
-
     // Update is called once per frame
     void Update()
     {
-        if (TutorialTape = null) this.gameObject.SetActive(false);
+        if (TutorialTape == null)
+        {
+            StartCoroutine(CountDown());//countdown before door opens
+            
+        }
+        
+    }
+
+    IEnumerator CountDown()
+    {
+        yield return new WaitForSeconds (5.0f);
+        OpenDoor();
+
+    }
+
+    private void OpenDoor()//open the door!!! to the main level
+    {
+        gameObject.SetActive(false);
     }
 }
