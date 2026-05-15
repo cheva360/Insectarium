@@ -14,6 +14,7 @@ public class UIController : MonoBehaviour
     public TextMeshProUGUI DecoderText;
     public ScrollRect DecoderScrollRect;
     public Image Fade;
+    public Image CursorImage;
     public Volume PostProcessingVolume;
     public GameObject UIEntryBackingPrefab;
     public GameObject UIEntryParent;
@@ -36,6 +37,12 @@ public class UIController : MonoBehaviour
     void Awake()
     {
         Instance = this;
+    }
+
+    void Start()
+    {
+        // Start cursor blink immediately so it runs even before any typewriter plays
+        _cursorCoroutine = StartCoroutine(CursorBlinkCoroutine());
     }
 
     public void RequestInteractText(MonoBehaviour requester)
@@ -68,25 +75,24 @@ public class UIController : MonoBehaviour
         }
     }
 
-    //reset audio tape ui when new loop starts
+    // Reset audio tape UI when new loop starts
     public void ResetUI()
     {
-        if (UIEntryParent != null)//clear backing ui
+        if (UIEntryParent != null) // clear backing ui
         {
             foreach (Transform child in UIEntryParent.transform)
-            {
                 Destroy(child.gameObject);
-            }
-            
         }
-        if (UIEntryCollectedParent != null)//clear collected ui
+
+        if (UIEntryCollectedParent != null) // clear collected ui
         {
             foreach (Transform child in UIEntryCollectedParent.transform)
-            {
                 Destroy(child.gameObject);
-            }
         }
-    } 
+
+        UIEntryCount = 0;
+        UICollectedCount = 0;
+    }
 
     public void PlayDecoderTypewriter(DecoderWordData wordData)
     {
@@ -195,7 +201,11 @@ public class UIController : MonoBehaviour
             _currentChunk = "";
         }
 
+        _isTyping = false;
         _decoderTypewriterCoroutine = null;
+
+        // Typewriter finished — lerp player back and restore Normal state
+        playerController.Instance.ExitDialogue();
     }
 
     void Update()
@@ -203,5 +213,17 @@ public class UIController : MonoBehaviour
         Camera.main.transform.localPosition = new Vector3(0, 0.85f, 0);
         Vector3 shakeOffset = Random.insideUnitCircle * ShakeMagnitude;
         Camera.main.transform.localPosition += new Vector3(shakeOffset.x, shakeOffset.y, 0);
+
+        bool inDialogue = playerController.Instance != null &&
+                          playerController.Instance.CurrentState == playerController.playerState.InDialogue;
+
+        if (inDialogue)
+        {
+            _currentInteractable = null;
+            InteractText.text = "";
+        }
+
+        if (CursorImage != null)
+            CursorImage.enabled = !inDialogue;
     }
 }

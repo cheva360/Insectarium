@@ -10,10 +10,9 @@ public class playerController : MonoBehaviour
 
     private void Awake()
     {
-
         Instance = this;
-
     }
+
     // player State Machine
     public enum playerState
     {
@@ -25,14 +24,13 @@ public class playerController : MonoBehaviour
 
     [Header("State")]
     [SerializeField] private playerState currentState = playerState.Normal;
-    // Public property to get current state
     public playerState CurrentState => currentState;
 
     [Header("Movement Settings")]
     public float moveSpeed = 3.5f;
     [SerializeField] private float sprintSpeed = 8f;
     [SerializeField] private float gravity = -9.81f;
-    private float baseMoveSpeed; // stores the original moveSpeed at start
+    private float baseMoveSpeed;
 
     [Header("Camera Settings")]
     [SerializeField] private float mouseSensitivity = 2f;
@@ -48,8 +46,18 @@ public class playerController : MonoBehaviour
     [SerializeField] private float radarBobHorizontalAmount = 0.02f;
     [SerializeField] private float radarBobVerticalAmount = 0.03f;
     [SerializeField] private float radarReturnToNeutralSpeed = 3f;
-    [SerializeField] private float radarUpdateFPS = 12f; // Low framerate for radar updates
+    [SerializeField] private float radarUpdateFPS = 12f;
+    [SerializeField] private float radarHideSpeed = 5f;
+    public bool radarHidden = false;
 
+    [Header("Dialogue Settings")]
+    [SerializeField] private float dialogueLookSpeed = 3f;
+    private Transform _dialogueLookTarget;
+    private Transform _dialoguePlayerTarget;
+    private Vector3 _preDialoguePosition;
+    private Quaternion _preDialogueRotation;
+    private float _preDialogueVerticalRotation;
+    private Coroutine _exitDialogueCoroutine;
 
     //[Header("Sprint Settings")]
     //[SerializeField] private float sprintDuration = 2f;
@@ -60,7 +68,6 @@ public class playerController : MonoBehaviour
     public float Sprint = 1f;
     private bool CanSprint;
     private bool isSprinting = false;
-    //private bool isJumping = true;
 
     [Header("Audio Settings")]
     [SerializeField] private AudioClip _footstepSound1;
@@ -72,16 +79,12 @@ public class playerController : MonoBehaviour
     [SerializeField] private float _lineofSightMaxDist;
     [SerializeField] private Vector3 _raycastStartOffset;
 
-
-    //private string _npcTag = "NPC";
-
     private CharacterController characterController;
     public Camera playerCamera;
     private Vector3 velocity;
     private bool isGrounded;
     private float verticalRotation = 0f;
     private bool _isPlayingFootsteps = false;
-    // Variables for Gizmo drawing
     private Vector3 _raycastHitLocation;
 
     // Radar animation variables
@@ -90,124 +93,153 @@ public class playerController : MonoBehaviour
     private float radarSwayVelocity = 0f;
     private float bobTimer = 0f;
     private Vector3 currentBobOffset = Vector3.zero;
-    private float radarUpdateAccumulator = 0f;  // Accumulator for low-FPS radar update
-    private float _accumulatedMouseX = 0f;       // Collects mouse input between radar ticks
+    private float radarUpdateAccumulator = 0f;
+    private float _accumulatedMouseX = 0f;
+    private float _radarCurrentY = -0.03f;
 
     // Audio fade variables
     private Coroutine _fadeOutCoroutine;
     private float _originalVolume = 1f;
 
-
-    // Start is called before the first frame update
     void Start()
     {
         characterController = GetComponent<CharacterController>();
-
-        // Lock and hide cursor
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
-
-        // Get camera component
         playerCamera = cameraTransform.GetComponent<Camera>();
 
-        // Get AudioSource if not assigned
         if (_audioSource == null)
-        {
             _audioSource = GetComponent<AudioSource>();
-        }
 
-        // Store original volume
         if (_audioSource != null)
-        {
             _originalVolume = _audioSource.volume;
-        }
 
-        // Store radar's original local position
         if (radar3DModel != null)
         {
             radarOriginalPosition = radar3DModel.localPosition;
+            _radarCurrentY = radarOriginalPosition.y;
         }
 
-        // Store base move speed for bob scaling
         baseMoveSpeed = moveSpeed;
     }
 
-    // Raycasting Methods
-    // Vector setting Ray start position to camera's world space position
-    private Vector3 _raycastStart
-    {
-        get { return cameraTransform.position; }
-    }
+    private Vector3 _raycastStart => cameraTransform.position;
+    private Vector3 _raycastDir => (cameraTransform.forward).normalized;
 
-    // Vector pointing out from camera
-    private Vector3 _raycastDir
-    {
-        get { return (cameraTransform.forward).normalized; }
-    }
-
-    // Update is called once per frame
     void Update()
     {
-        // Handle focus/unfocus toggle
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
         }
 
-        // Re-lock cursor on click when focused
         if (Input.GetMouseButtonDown(0) && Application.isFocused)
         {
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
         }
 
-        // Update behavior based on current state
+        // Always apply radar Y position every frame (lerp + bob are calculated on radar tick)
+        if (radar3DModel != null)
+        {
+            Vector3 pos = radar3DModel.localPosition;
+            pos.y = _radarCurrentY + currentBobOffset.y;
+            radar3DModel.localPosition = pos;
+        }
+
+        // Radar animation always ticks regardless of state
+        HandleRadarAnimation();
+
         switch (currentState)
         {
             case playerState.Normal:
                 HandleMovement();
                 HandleMouseLook();
-                HandleRadarAnimation();
                 HandleWalkingSound();
-                //HandleSprint();
                 break;
 
             case playerState.InDialogue:
-                // no movement, camera lerp to npc
-                //StopWalkingSound();
-                //LerpToNPC();
+                LerpCameraToTarget();
                 break;
 
             case playerState.Cutscene:
-                // Camera is controlled by cutscene, no player input
-                //HandleRadarAnimation();
                 break;
 
             case playerState.Disabled:
-                // No interactions or movement
-                //StopWalkingSound();
                 break;
         }
-
     }
 
-    // Change the player's state
+    public void EnterDialogue(Transform lookTarget, Transform playerTarget = null)
+    {
+        _preDialoguePosition = transform.position;
+        _preDialogueRotation = transform.rotation;
+        _preDialogueVerticalRotation = verticalRotation;
+
+        _dialogueLookTarget = lookTarget;
+        _dialoguePlayerTarget = playerTarget;
+        SetState(playerState.InDialogue);
+    }
+
+    public void ExitDialogue()
+    {
+        radarHidden = false;
+        if (_exitDialogueCoroutine != null)
+            StopCoroutine(_exitDialogueCoroutine);
+        _exitDialogueCoroutine = StartCoroutine(ExitDialogueCoroutine());
+    }
+
+    private IEnumerator ExitDialogueCoroutine()
+    {
+        _dialogueLookTarget = null;
+        _dialoguePlayerTarget = null;
+
+        while (Vector3.Distance(transform.position, _preDialoguePosition) > 0.01f ||
+               Quaternion.Angle(transform.rotation, _preDialogueRotation) > 0.5f ||
+               Mathf.Abs(verticalRotation - _preDialogueVerticalRotation) > 0.5f)
+        {
+            transform.position = Vector3.Lerp(transform.position, _preDialoguePosition, dialogueLookSpeed * Time.deltaTime);
+            transform.rotation = Quaternion.Slerp(transform.rotation, _preDialogueRotation, dialogueLookSpeed * Time.deltaTime);
+            verticalRotation = Mathf.Lerp(verticalRotation, _preDialogueVerticalRotation, dialogueLookSpeed * Time.deltaTime);
+            cameraTransform.localRotation = Quaternion.Euler(verticalRotation, 0f, 0f);
+            yield return null;
+        }
+
+        transform.position = _preDialoguePosition;
+        transform.rotation = _preDialogueRotation;
+        verticalRotation = _preDialogueVerticalRotation;
+        cameraTransform.localRotation = Quaternion.Euler(verticalRotation, 0f, 0f);
+
+        SetState(playerState.Normal);
+        _exitDialogueCoroutine = null;
+    }
+
+    private void LerpCameraToTarget()
+    {
+        if (_dialoguePlayerTarget != null)
+            transform.position = Vector3.Lerp(transform.position, _dialoguePlayerTarget.position, dialogueLookSpeed * Time.deltaTime);
+
+        if (_dialogueLookTarget == null) return;
+
+        Vector3 directionToTarget = (_dialogueLookTarget.position - transform.position).normalized;
+        Quaternion targetBodyRotation = Quaternion.Euler(0f, Quaternion.LookRotation(directionToTarget, Vector3.up).eulerAngles.y, 0f);
+        transform.rotation = Quaternion.Slerp(transform.rotation, targetBodyRotation, dialogueLookSpeed * Time.deltaTime);
+
+        float targetVertical = -Mathf.Asin(directionToTarget.y) * Mathf.Rad2Deg;
+        targetVertical = Mathf.Clamp(targetVertical, -maxLookAngle, maxLookAngle);
+        verticalRotation = Mathf.Lerp(verticalRotation, targetVertical, dialogueLookSpeed * Time.deltaTime);
+        cameraTransform.localRotation = Quaternion.Euler(verticalRotation, 0f, 0f);
+    }
+
     public void SetState(playerState newState)
     {
         if (currentState == newState) return;
-
-        // Exit current state
         OnStateExit(currentState);
-
-        // Change state
         currentState = newState;
-
-        // Enter new state
         OnStateEnter(newState);
     }
 
-    // Called when entering a new state
     private void OnStateEnter(playerState state)
     {
         switch (state)
@@ -215,19 +247,15 @@ public class playerController : MonoBehaviour
             case playerState.Normal:
                 Cursor.lockState = CursorLockMode.Locked;
                 Cursor.visible = false;
-                characterController.enabled = true; // Re-enable character controller if it was disabled in cutscene
+                characterController.enabled = true;
                 break;
 
             case playerState.InDialogue:
-                // Stop any movement
                 velocity = Vector3.zero;
                 isSprinting = false;
-                //StopWalkingSound();
                 break;
 
             case playerState.Cutscene:
-                // Stop all movement and store camera state if needed
-                // Disable character controller
                 characterController.enabled = false;
                 velocity = Vector3.zero;
                 isSprinting = false;
@@ -235,21 +263,19 @@ public class playerController : MonoBehaviour
                 break;
 
             case playerState.Disabled:
-                // Stop all movement
                 velocity = Vector3.zero;
                 isSprinting = false;
-                //StopWalkingSound();
                 break;
         }
     }
 
-    // Called when exiting a state
     private void OnStateExit(playerState state)
     {
         switch (state)
         {
             case playerState.InDialogue:
-                // Restore camera control to player
+                _dialogueLookTarget = null;
+                _dialoguePlayerTarget = null;
                 Cursor.lockState = CursorLockMode.Locked;
                 Cursor.visible = false;
                 break;
@@ -258,59 +284,21 @@ public class playerController : MonoBehaviour
 
     private void HandleMovement()
     {
-        // Check if grounded
         isGrounded = characterController.isGrounded;
 
-        // Get input
         float moveX = Input.GetAxisRaw("Horizontal");
         float moveZ = Input.GetAxisRaw("Vertical");
 
-        // Check if sprinting
-        //isSprinting = Input.GetKey(KeyCode.LeftShift) && CanSprint && (moveX != 0 || moveZ != 0);
-
-        // Calculate current speed
-        float currentSpeed;
-        if (isSprinting)
-        {
-            currentSpeed = sprintSpeed;
-        }
-        else
-        {
-            currentSpeed = moveSpeed;
-        }
-
-        // Calculate movement direction relative to player rotation
+        float currentSpeed = isSprinting ? sprintSpeed : moveSpeed;
         Vector3 move = transform.right * moveX + transform.forward * moveZ;
-
-        // Move the character
         characterController.Move(move.normalized * currentSpeed * Time.deltaTime);
 
-        // Apply gravity
         if (isGrounded && velocity.y < 0)
-        {
-            velocity.y = -2f; // Small downward force to keep grounded
-        }
+            velocity.y = -2f;
 
         velocity.y += gravity * Time.deltaTime;
         characterController.Move(velocity * Time.deltaTime);
     }
-
-    //private void HandleJump()
-    //{
-    //    // Check if grounded
-    //    isGrounded = characterController.isGrounded;
-    //    if (isGrounded)
-    //    {
-    //        isJumping = false;
-    //    }
-    //    // Jump
-    //    if (Input.GetKeyDown(KeyCode.Space) && isGrounded && !isJumping)
-    //    {
-    //        velocity.y = Mathf.Sqrt(jumpForce * -2f * gravity);
-    //        isJumping = true;
-    //        //StopWalkingSound();
-    //    }
-    //}
 
     private void HandleMouseLook()
     {
@@ -325,17 +313,14 @@ public class playerController : MonoBehaviour
             verticalRotation = Mathf.Clamp(verticalRotation, -maxLookAngle, maxLookAngle);
             cameraTransform.localRotation = Quaternion.Euler(verticalRotation, 0f, 0f);
         }
-
     }
 
     private void HandleRadarAnimation()
     {
         if (radar3DModel == null) return;
 
-        // Always accumulate mouse input every frame so no input is lost between ticks
         _accumulatedMouseX += Input.GetAxis("Mouse X") * mouseSensitivity;
 
-        // Accumulate time and only update radar position at the target low framerate
         float radarDeltaTime = 1f / Mathf.Max(radarUpdateFPS, 1f);
         radarUpdateAccumulator += Time.deltaTime;
 
@@ -345,20 +330,21 @@ public class playerController : MonoBehaviour
         float tickDelta = radarUpdateAccumulator;
         radarUpdateAccumulator = 0f;
 
-        // Consume accumulated mouse input for this tick, then reset it
+        // Lerp radar Y based on radarHidden — same FPS as all radar animations
+        float targetRadarY = radarHidden ? -0.8f : -0.03f;
+        _radarCurrentY = Mathf.Lerp(_radarCurrentY, targetRadarY, radarHideSpeed * tickDelta);
+
+        // Only apply sway and bob in Normal state
+        if (currentState != playerState.Normal)
+            return;
+
         float mouseX = _accumulatedMouseX;
         _accumulatedMouseX = 0f;
 
-        // Calculate target sway offset based on total horizontal mouse movement since last tick
         float targetSwayOffset = -mouseX * radarSwayAmount;
-
-        // SmoothDamp towards target sway
         radarSwayOffset = Mathf.SmoothDamp(radarSwayOffset, targetSwayOffset, ref radarSwayVelocity, 1f / radarSwaySmooth, Mathf.Infinity, tickDelta);
-
-        // Damp back to center when no input
         radarSwayOffset = Mathf.Lerp(radarSwayOffset, 0f, radarSwayDamping * tickDelta);
 
-        // Check if player is moving
         float moveX = Input.GetAxisRaw("Horizontal");
         float moveZ = Input.GetAxisRaw("Vertical");
         bool isMoving = (moveX != 0 || moveZ != 0) && isGrounded;
@@ -369,12 +355,9 @@ public class playerController : MonoBehaviour
         {
             float currentSpeed = isSprinting ? sprintSpeed : moveSpeed;
             float speedMultiplier = currentSpeed / baseMoveSpeed;
-
             bobTimer += tickDelta * radarBobFrequency * speedMultiplier;
-
             float horizontalBob = Mathf.Sin(bobTimer) * radarBobHorizontalAmount;
             float verticalBob = Mathf.Sin(bobTimer * 2f) * radarBobVerticalAmount;
-
             targetBobOffset = new Vector3(horizontalBob, verticalBob, 0f);
         }
         else
@@ -382,48 +365,18 @@ public class playerController : MonoBehaviour
             bobTimer = Mathf.Lerp(bobTimer, 0f, radarReturnToNeutralSpeed * tickDelta);
         }
 
-        // Smoothly lerp current bob offset towards target
         currentBobOffset = Vector3.Lerp(currentBobOffset, targetBobOffset, radarReturnToNeutralSpeed * tickDelta);
 
-        // Combine all offsets and apply
         Vector3 swayOffset = new Vector3(radarSwayOffset, 0f, 0f);
-        radar3DModel.localPosition = radarOriginalPosition + swayOffset + currentBobOffset;
+        radar3DModel.localPosition = new Vector3(
+            radarOriginalPosition.x + swayOffset.x + currentBobOffset.x,
+            _radarCurrentY + currentBobOffset.y,
+            radarOriginalPosition.z + currentBobOffset.z
+        );
     }
 
-    private void LerpToNPC()
-    {
-        //// Raycast to find NPC position
-        //RaycastHit hitInfo;
-        //if (Physics.Raycast(_raycastStart, _raycastDir, out hitInfo, _lineofSightMaxDist))
-        //{
-        //    if (hitInfo.collider.gameObject.tag.Equals(_npcTag) && hitInfo.collider.gameObject.GetComponent<NPC>().enabled == true)
-        //    {
-        //        Vector3 npcPosition = hitInfo.collider.gameObject.transform.position;
-        //        Vector3 directionToNPC = (npcPosition - cameraTransform.position).normalized;
-        //        Quaternion targetRotation = Quaternion.LookRotation(directionToNPC, Vector3.up);
-        //        NPCDetected?.Invoke(hitInfo.collider.gameObject);
+    private void LerpToNPC() { }
 
-        //        //slerp player horizontal rotate to npc
-        //        transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.Euler(0f, targetRotation.eulerAngles.y, 0f), fovTransitionSpeed * Time.deltaTime);
-
-
-        //        //slerp camera vertical rotation to npc
-        //        float targetVertical = -15f;
-
-        //        // Clamp the target rotation to prevent exceeding look angle limits
-        //        //targetVertical = Mathf.Clamp(targetVertical, -maxLookAngle, maxLookAngle);
-
-        //        // Lerp towards target
-        //        verticalRotation = Mathf.Lerp(verticalRotation, targetVertical, fovTransitionSpeed * Time.deltaTime);
-
-        //        cameraTransform.localRotation = Quaternion.Euler(verticalRotation, 0f, 0f);
-        //        ArrowCameraTransform.localRotation = Quaternion.Euler(verticalRotation, 0f, 0f);
-        //    }
-        //}
-    }
-
-
-    // Track which footstep plays next
     private int _nextFootstep = 0;
     private Coroutine _footstepCoroutine;
 
@@ -440,9 +393,7 @@ public class playerController : MonoBehaviour
         if (IsWalking())
         {
             if (_footstepCoroutine == null && _audioSource != null)
-            {
                 _footstepCoroutine = StartCoroutine(FootstepLoop());
-            }
         }
     }
 
@@ -450,13 +401,11 @@ public class playerController : MonoBehaviour
     {
         _isPlayingFootsteps = true;
         _nextFootstep = 0;
-
         const float defaultMoveSpeed = 3.5f;
 
         while (true)
         {
-            if (!IsWalking())
-                break;
+            if (!IsWalking()) break;
 
             AudioClip clip = (_nextFootstep == 0) ? _footstepSound1 : _footstepSound2;
             _nextFootstep = (_nextFootstep + 1) % 2;
@@ -465,22 +414,16 @@ public class playerController : MonoBehaviour
             {
                 _audioSource.clip = clip;
                 _audioSource.Play();
-
-                // At defaultMoveSpeed (3.5f): extraDelay = 0, so waitTime = clip.length (no added delay)
-                // As moveSpeed decreases, extraDelay grows, slowing footstep rate
                 float currentSpeed = Mathf.Max(moveSpeed, 0.1f);
                 float extraDelay = clip.length * ((defaultMoveSpeed / currentSpeed) - 1f);
-                float waitTime = clip.length + extraDelay;
-
-                yield return new WaitForSeconds(waitTime);
+                yield return new WaitForSeconds(clip.length + extraDelay);
             }
             else
             {
                 yield return null;
             }
 
-            if (!IsWalking())
-                break;
+            if (!IsWalking()) break;
         }
 
         _isPlayingFootsteps = false;
@@ -499,5 +442,4 @@ public class playerController : MonoBehaviour
     }
 
     private bool _isGameFocused = true;
-
 }
