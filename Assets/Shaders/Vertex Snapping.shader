@@ -92,7 +92,7 @@ Shader "Custom/ObjectEffects"
             
             Varyings vert(Attributes IN)
             {
-                Varyings OUT;
+                 Varyings OUT;
 
                 float4 worldPosition = mul(UNITY_MATRIX_MV, IN.positionOS);
                 //float4 worldPosition = float4(TransformObjectToWorldNormal(IN.normal), 1.0);
@@ -112,74 +112,22 @@ Shader "Custom/ObjectEffects"
                 // gourraud (vertex) shading
                 Light light = GetMainLight();
                 half3 n = TransformObjectToWorldNormal(IN.normal);         // Convert normal to world space
-                half3 l = normalize(light.direction);          // Light direction in world space
-                half3 r = 2.0 * dot(n, l) * n - l;                      // Reflection vector
-                half3 v = normalize(_WorldSpaceCameraPos - worldPosition);   // View direction
 
-                float Ia = _k.x;                                        // Ambient intensity
-                float Id = _k.y * saturate(dot(n, l));                  // Diffuse intensity using Lambert's law
-                float Is = _k.z * pow(saturate(dot(r, v)), _SpecularExponent); // Specular intensity
-
-                float3 ambient = Ia * _DiffuseColor.rgb;               // Ambient lighting
-                float3 diffuse = Id * _DiffuseColor.rgb * light.color; // Diffuse lighting
-                float3 specular = Is * light.color;                // Specular lighting
-
-                float3 finalColor = ambient + diffuse + specular;       // Combine all lighting components
-
-                OUT.color = half4(finalColor, 1.0);                      // Set the final output colour
                 OUT.color = half4(LightingFunc(worldPosition, light, n), 1.0);
                 OUT.n = n;
                 
-                InputData inputData = (InputData)0;
-                inputData.positionWS = worldPosition;
-                inputData.normalWS = n;
-                inputData.viewDirectionWS = GetWorldSpaceNormalizeViewDir(worldPosition);
-                //inputData.normalizedScreenSpaceUV = GetNormalizedScreenSpaceUV(input.positionCS);
-                
-                
                 VertexPositionInputs vertexInput = GetVertexPositionInputs(IN.positionOS.xyz);
                 VertexNormalInputs normalInput = GetVertexNormalInputs(IN.normal, IN.tangentOS);
-                half3 vertexLight = VertexLighting(vertexInput.positionWS, normalInput.normalWS);
-                OUT.color = half4(vertexLight, 1.0);
-                
-                uint lightsCount = GetAdditionalLightsCount();
-    uint meshRenderingLayers = GetMeshRenderingLayer();
-
-    LIGHT_LOOP_BEGIN(lightsCount)
-        Light light = GetAdditionalLight(lightIndex, vertexInput.positionWS);
-
-#ifdef _LIGHT_LAYERS
-    if (IsMatchingLightLayer(light.layerMask, meshRenderingLayers))
-#endif
-    {
-        half3 lightColor = light.color * light.distanceAttenuation;
-        OUT.color += half4(LightingLambert(lightColor, light.direction, normalInput.normalWS), 1.0);
-    }
-
-    LIGHT_LOOP_END
-                uint pixelLightCount = GetAdditionalLightsCount();
-                //LIGHT_LOOP_BEGIN(pixelLightCount)
-                //    Light additionalLight = GetAdditionalLight(lightIndex, worldPosition);
-                //    half3 lightColor = light.color * light.distanceAttenuation;
-                //    OUT.color += half4(LightingLambert(light.color, light.direction, n), 1.0);
-                //LIGHT_LOOP_END
                 
                 // additional lights
-                // for (int i=0; i < GetAdditionalLightsCount(); ++i)
-                // {
-                //     Light a_light = GetAdditionalLight(i, GetVertexPositionInputs(IN.positionOS).positionWS);
-                //     half3 a_l = normalize(light.direction);          // Light direction in world space
-                //     half3 a_r = 2.0 * dot(n, a_l) * n - a_l;                      // Reflection vector
-                //     
-                //     float a_Id = _k.y * saturate(dot(n, a_l));                  // Diffuse intensity using Lambert's law
-                //     float a_Is = _k.z * pow(saturate(dot(a_r, v)), _SpecularExponent); // Specular intensity
-
-                //     float3 a_diffuse = a_Id * _DiffuseColor.rgb * a_light.color; // Diffuse lighting
-                //     float3 a_specular = a_Is * a_light.color;                // Specular lighting
-
-                //     float3 addColor = ambient + a_diffuse + a_specular;
-                //     OUT.color += half4(addColor, 1.0);
-                // }
+                uint lightsCount = GetAdditionalLightsCount();
+                LIGHT_LOOP_BEGIN(lightsCount)
+                    Light light = GetAdditionalLight(lightIndex, vertexInput.positionWS);
+                    {
+                        half3 lightColor = light.color * light.distanceAttenuation;
+                        OUT.color += half4(LightingLambert(lightColor, light.direction, normalInput.normalWS), 1.0);
+                    }
+                LIGHT_LOOP_END
                 
                 return OUT;
             }
