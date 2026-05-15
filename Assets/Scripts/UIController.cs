@@ -68,6 +68,26 @@ public class UIController : MonoBehaviour
         }
     }
 
+    //reset audio tape ui when new loop starts
+    public void ResetUI()
+    {
+        if (UIEntryParent != null)//clear backing ui
+        {
+            foreach (Transform child in UIEntryParent.transform)
+            {
+                Destroy(child.gameObject);
+            }
+            
+        }
+        if (UIEntryCollectedParent != null)//clear collected ui
+        {
+            foreach (Transform child in UIEntryCollectedParent.transform)
+            {
+                Destroy(child.gameObject);
+            }
+        }
+    } 
+
     public void PlayDecoderTypewriter(DecoderWordData wordData)
     {
         if (wordData == null) return;

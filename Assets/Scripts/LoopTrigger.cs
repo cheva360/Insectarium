@@ -147,8 +147,11 @@ public class LoopTrigger : MonoBehaviour
         }
 
         // Advance loop count (caps at Three)
+        // reset cassette ui
         if (GameController.Instance.CurrentLoop < GameController.LoopCount.Three)
             GameController.Instance.CurrentLoop = (GameController.LoopCount)(GameController.Instance.CurrentLoop + 1);
+
+        UIController.Instance.ResetUI();
 
         _coroutineStarted = false;
     }

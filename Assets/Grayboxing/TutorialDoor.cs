@@ -3,7 +3,7 @@ using UnityEngine;
 
 public class TutorialDoor : MonoBehaviour
 {
-    //this is only used for grayboxing!!! WILL DELETE THIS AFTERWARD
+    //this is only used for grayboxing!!! WILL DELETE OR CHANGE THIS AFTERWARD
 
     [SerializeField] private GameObject TutorialTape;
 
