@@ -158,7 +158,6 @@ Shader "Custom/PSXLit"
                 uint lightsCount = GetAdditionalLightsCount();
                 LIGHT_LOOP_BEGIN(lightsCount)
                     Light light = GetAdditionalLight(lightIndex, IN.positionWS);
-                 	
                     shadow_amt *= AdditionalLightRealtimeShadow(lightIndex, IN.positionWS, light.direction);
                 LIGHT_LOOP_END
                 
