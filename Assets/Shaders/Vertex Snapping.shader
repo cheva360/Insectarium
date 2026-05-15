@@ -4,12 +4,15 @@ Shader "Custom/ObjectEffects"
     {
         [MainColor] _BaseColor("Base Color", Color) = (1, 1, 1, 1)
         [MainTexture] _BaseMap("Base Map", 2D) = "white" {}
-        _SnapIntensity ("Snap Intensity", Range(0.001,0.05)) = 0.0066
+        _SnapIntensity ("Snap Intensity", Range(0.0001,0.05)) = 0.0066
         _AffineOn ("Affine Mapping On", Range(0,1)) = 1
         
         _DiffuseColor("Diffuse Color", Color) = (1,1,1,1)
         _SpecularExponent("Specular Exponent", Float) = 80
         _k ("Ambient, Diffuse, Specular", Vector) = (0.5,0.5,0.8)
+        
+        [HDR] _EmissionColor("Emission Color", Color) = (1,1,1,1)
+        [NoScaleOffset] _EmissionMap("Emission Map", 2D) = "white" {}
     }
 
     SubShader
@@ -30,8 +33,6 @@ Shader "Custom/ObjectEffects"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/RealtimeLights.hlsl"
             
-
-            
             struct Attributes
             {
                 float4 positionOS : POSITION;
@@ -50,10 +51,17 @@ Shader "Custom/ObjectEffects"
 
             TEXTURE2D(_BaseMap);
             SAMPLER(sampler_BaseMap);
+            
+            TEXTURE2D(_EmissionMap);
+            SAMPLER(sampler_EmissionMap);
 
             CBUFFER_START(UnityPerMaterial)
                 half4 _BaseColor;
                 float4 _BaseMap_ST;
+            
+                half4 _EmissionColor;
+                float4 _EmissionMap_ST;
+            
                 float _SnapIntensity;
                 float _AffineOn;
             
@@ -82,12 +90,6 @@ Shader "Custom/ObjectEffects"
 
                 float3 finalColor = ambient + diffuse + specular;       // Combine all lighting components
                 return finalColor;
-            }
-            
-            float3 LightingFunc(float3 normalWS, Light light)
-            {
-                half3 lightColor = light.color * light.distanceAttenuation;
-                return LightingLambert(lightColor, light.direction, normalWS);
             }
             
             Varyings vert(Attributes IN)
@@ -138,7 +140,8 @@ Shader "Custom/ObjectEffects"
                 if (_AffineOn)
                     color = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv / IN.positionHCS.w) * IN.color;
                     
-                
+                half4 emission_col = SAMPLE_TEXTURE2D(_EmissionMap, sampler_EmissionMap, IN.uv) * _EmissionColor;
+                color += emission_col;
                 return color;
             }
             ENDHLSL
