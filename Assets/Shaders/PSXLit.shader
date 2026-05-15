@@ -46,7 +46,8 @@ Shader "Custom/PSXLit"
             struct Varyings
             {
                 float4 positionHCS : SV_POSITION;
-                float2 uv : TEXCOORD0;
+                float3 positionWS : TEXCOORD0;
+                float2 uv : TEXCOORD1;
                 half4 color: COLOR0;
                 float4 shadowCoords : TEXCOORD2;
             };
@@ -102,6 +103,7 @@ Shader "Custom/PSXLit"
                 //float4 worldPosition = float4(TransformObjectToWorldNormal(IN.normal), 1.0);
                 
                 OUT.positionHCS = TransformObjectToHClip(IN.positionOS.xyz);
+                OUT.positionWS = TransformObjectToWorld(IN.positionOS.xyz);
                
                 // vert snapping
                 float2 screenPos = OUT.positionHCS.xy / OUT.positionHCS.w;
@@ -149,6 +151,16 @@ Shader "Custom/PSXLit"
                 color += emission_col;
                 
                 half shadow_amt = MainLightRealtimeShadow(IN.shadowCoords);
+                
+                InputData inputData = (InputData)0;
+                inputData.positionWS = IN.positionWS;
+                
+                uint lightsCount = GetAdditionalLightsCount();
+                LIGHT_LOOP_BEGIN(lightsCount)
+                    Light light = GetAdditionalLight(lightIndex, IN.positionWS);
+                 	
+                    shadow_amt *= AdditionalLightRealtimeShadow(lightIndex, IN.positionWS, light.direction);
+                LIGHT_LOOP_END
                 
                 return color * shadow_amt;
             }
