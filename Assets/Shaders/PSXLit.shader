@@ -1,4 +1,4 @@
-Shader "Custom/ObjectEffects"
+Shader "Custom/PSXLit"
 {
     Properties
     {
