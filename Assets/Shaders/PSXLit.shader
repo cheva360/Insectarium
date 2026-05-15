@@ -27,7 +27,9 @@ Shader "Custom/PSXLit"
             #pragma fragment frag
             
             #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
-            #pragma multi_compile _ _ADDITIONAL_LIGHTS
+            #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
+            #pragma multi_compile _ _ADDITIONAL_LIGHT_SHADOWS
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -46,7 +48,7 @@ Shader "Custom/PSXLit"
                 float4 positionHCS : SV_POSITION;
                 float2 uv : TEXCOORD0;
                 half4 color: COLOR0;
-                half3 n : TEXCOORD1;
+                float4 shadowCoords : TEXCOORD2;
             };
 
             TEXTURE2D(_BaseMap);
@@ -116,7 +118,6 @@ Shader "Custom/PSXLit"
                 half3 n = TransformObjectToWorldNormal(IN.normal);         // Convert normal to world space
 
                 OUT.color = half4(LightingFunc(worldPosition, light, n), 1.0);
-                OUT.n = n;
                 
                 VertexPositionInputs vertexInput = GetVertexPositionInputs(IN.positionOS.xyz);
                 VertexNormalInputs normalInput = GetVertexNormalInputs(IN.normal, IN.tangentOS);
@@ -131,6 +132,10 @@ Shader "Custom/PSXLit"
                     }
                 LIGHT_LOOP_END
                 
+                // shadows
+                float4 shadowCoordinates = GetShadowCoord(vertexInput);
+                OUT.shadowCoords = shadowCoordinates;
+                
                 return OUT;
             }
 
@@ -142,9 +147,13 @@ Shader "Custom/PSXLit"
                     
                 half4 emission_col = SAMPLE_TEXTURE2D(_EmissionMap, sampler_EmissionMap, IN.uv) * _EmissionColor;
                 color += emission_col;
-                return color;
+                
+                half shadow_amt = MainLightRealtimeShadow(IN.shadowCoords);
+                
+                return color * shadow_amt;
             }
             ENDHLSL
         }
+        UsePass "Legacy Shaders/VertexLit/SHADOWCASTER"
     }
 }
