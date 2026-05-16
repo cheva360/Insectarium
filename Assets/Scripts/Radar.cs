@@ -8,21 +8,21 @@ public class Radar : MonoBehaviour
     [SerializeField] private Transform MinimapRotate;
     [SerializeField] private GameObject RadarPingPrefab;
     [SerializeField] private GameObject RadarPingParent;
-    [SerializeField] private float maxRadarDistance = 50f;
+    [SerializeField] private float maxRadarDistance = 50f;   // visual radar display radius
+    [SerializeField] private float raycastRange = 100f;      // how far the boxcast actually reaches
     [SerializeField] private AudioClip radarPingSound;
     [SerializeField] private float sweepWidth = 2f;
     [SerializeField] private float sweepHeight = 10f;
 
-    private float radarLineRotation = 0f;
-    private float radarSweepAngle = 0f;
+    private float radarSweepAngle = 0f;                      // monotonically increasing — never wrapped
     private Quaternion radarLineBaseRotation;
     private Dictionary<Collider, float> lastDetectionAngle = new Dictionary<Collider, float>();
     [SerializeField] private float redetectionAngle = 90f;
     private AudioSource audioSource;
     private bool soundPlayedThisFrame = false;
 
-    [SerializeField] private float rotationSpeed = 30f; // degrees per second
-    [SerializeField] private int targetFPS = 30;        // radar line update rate
+    [SerializeField] private float rotationSpeed = 30f;      // degrees per second
+    [SerializeField] private int targetFPS = 30;             // radar LINE visual update rate
 
     void Start()
     {
@@ -32,32 +32,20 @@ public class Radar : MonoBehaviour
 
         radarLineBaseRotation = RadarLine.transform.localRotation;
 
-        StartCoroutine(RadarLineRotationCoroutine());
+        StartCoroutine(RadarLineVisualCoroutine());
     }
 
-    private IEnumerator RadarLineRotationCoroutine()
+    // Updates the RadarLine UI at a low, throttled rate
+    private IEnumerator RadarLineVisualCoroutine()
     {
         float interval = 1f / targetFPS;
-        float degreesPerTick = rotationSpeed * interval;
 
         while (true)
         {
             yield return new WaitForSeconds(interval);
 
-            soundPlayedThisFrame = false;
-
-            radarLineRotation -= degreesPerTick;
-            radarSweepAngle += degreesPerTick;
-
-            if (radarSweepAngle >= 360f)
-            {
-                radarSweepAngle -= 360f;
-                lastDetectionAngle.Clear();
-            }
-
-            RadarLine.transform.localRotation = radarLineBaseRotation * Quaternion.AngleAxis(-radarLineRotation, Vector3.right);
-
-            PerformRadarSweep();
+            // Use modulo only for the visual rotation
+            RadarLine.transform.localRotation = radarLineBaseRotation * Quaternion.AngleAxis(radarSweepAngle % 360f, Vector3.right);
         }
     }
 
@@ -67,25 +55,25 @@ public class Radar : MonoBehaviour
             MinimapRotate.eulerAngles.x,
             MinimapRotate.eulerAngles.y,
             GameController.Instance.player.transform.eulerAngles.y);
+
+        // Monotonically increasing — no wrap, so redetection math is always accurate
+        radarSweepAngle += rotationSpeed * Time.deltaTime;
+
+        soundPlayedThisFrame = false;
+        PerformRadarSweep();
     }
 
     private void PerformRadarSweep()
     {
-        float absoluteAngle = radarSweepAngle + GameController.Instance.player.transform.eulerAngles.y;
+        // Use modulo only for the world direction calculation
+        float absoluteAngle = (radarSweepAngle % 360f) + GameController.Instance.player.transform.eulerAngles.y;
         Vector3 sweepDirection = Quaternion.Euler(0, absoluteAngle, 0) * Vector3.forward;
         Quaternion sweepRotation = Quaternion.LookRotation(sweepDirection, Vector3.up);
 
         Vector3 origin = GameController.Instance.player.transform.position;
-
         Vector3 halfExtents = new Vector3(sweepWidth, sweepHeight, 0.1f);
 
-        RaycastHit[] hits = Physics.BoxCastAll(
-            origin,
-            halfExtents,
-            sweepDirection,
-            sweepRotation,
-            maxRadarDistance
-        );
+        RaycastHit[] hits = Physics.BoxCastAll(origin, halfExtents, sweepDirection, sweepRotation, raycastRange);
 
         foreach (RaycastHit hit in hits)
         {
@@ -99,8 +87,9 @@ public class Radar : MonoBehaviour
                 }
                 else
                 {
-                    float angleDifference = Mathf.Abs(Mathf.DeltaAngle(lastDetectionAngle[hit.collider], radarSweepAngle));
-                    if (angleDifference >= redetectionAngle)
+                    // Straightforward subtraction — no wrapping ambiguity
+                    float angleTraveled = radarSweepAngle - lastDetectionAngle[hit.collider];
+                    if (angleTraveled >= redetectionAngle)
                         shouldDetect = true;
                 }
 
@@ -119,6 +108,7 @@ public class Radar : MonoBehaviour
         Vector3 directionToObject = (worldPosition - GameController.Instance.player.transform.position).normalized;
         float angle = Vector3.SignedAngle(GameController.Instance.player.transform.forward, directionToObject, Vector3.up);
 
+        // Clamp to 1 so objects beyond maxRadarDistance appear pinned at the radar edge
         float normalizedDistance = Mathf.Clamp01(distance / maxRadarDistance);
         float radarDistance = normalizedDistance * 0.45f;
 
@@ -143,25 +133,32 @@ public class Radar : MonoBehaviour
             return;
 
         Vector3 playerPos = GameController.Instance.player.transform.position;
-        float absoluteAngle = radarSweepAngle + GameController.Instance.player.transform.eulerAngles.y;
+        float absoluteAngle = (radarSweepAngle % 360f) + GameController.Instance.player.transform.eulerAngles.y;
         Vector3 sweepDirection = Quaternion.Euler(0, absoluteAngle, 0) * Vector3.forward;
 
+        // Raycast range line
         Gizmos.color = Color.cyan;
-        Gizmos.DrawLine(playerPos, playerPos + sweepDirection * maxRadarDistance);
+        Gizmos.DrawLine(playerPos, playerPos + sweepDirection * raycastRange);
 
+        // Boxcast extent
         Gizmos.color = Color.blue;
         Gizmos.matrix = Matrix4x4.TRS(
-            playerPos + sweepDirection * (maxRadarDistance * 0.5f),
+            playerPos + sweepDirection * (raycastRange * 0.5f),
             Quaternion.LookRotation(sweepDirection, Vector3.up),
             Vector3.one);
         Gizmos.DrawWireCube(Vector3.zero, new Vector3(sweepWidth * 2f, sweepHeight * 2f, 0.2f));
         Gizmos.matrix = Matrix4x4.identity;
 
+        // Max radar display radius (green)
         Gizmos.color = Color.green;
         DrawCircle(playerPos, maxRadarDistance, 64);
 
+        // Raycast range radius (magenta)
+        Gizmos.color = Color.magenta;
+        DrawCircle(playerPos, raycastRange, 64);
+
         Gizmos.color = Color.yellow;
-        Vector3 arcStart = Quaternion.Euler(0, GameController.Instance.player.transform.eulerAngles.y, 0) * Vector3.forward * maxRadarDistance;
+        Vector3 arcStart = Quaternion.Euler(0, GameController.Instance.player.transform.eulerAngles.y, 0) * Vector3.forward * raycastRange;
         Gizmos.DrawLine(playerPos, playerPos + arcStart);
     }
 
@@ -177,5 +174,11 @@ public class Radar : MonoBehaviour
             Gizmos.DrawLine(prevPoint, newPoint);
             prevPoint = newPoint;
         }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (lastDetectionAngle.ContainsKey(other))
+            lastDetectionAngle.Remove(other);
     }
 }
