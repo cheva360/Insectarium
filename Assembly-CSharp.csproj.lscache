@@ -40,63 +40,64 @@ TemporaryDependencyNodeTargetIdentifier=
 /langversion:9.0
 
 [sourceFiles]
-Assets/
- Grayboxing/TutorialDoor.cs
- Scripts/
-  CameraTransform.cs
-  CockroachFollow.cs
-  Decoder.cs
-  DecoderWordData.cs
-  EmissionFlicker.cs
-  GameController.cs
-  Interactable.cs
-  LargeCockroach.cs
-  LoopTrigger.cs
-  PlayerController.cs
-  Radar.cs
-  RadarPingFade.cs
-  radarPoint.cs
-  SmallCockroach.cs
-  UIController.cs
- Shaders/Pixelize & Color Depth/
-  CrunchFeature.cs
-  PixelationComponent.cs
-  PixelizeRenderFeature.cs
- TextMesh Pro/Examples & Extras/Scripts/
-  Benchmark01.cs
-  Benchmark01_UGUI.cs
-  Benchmark02.cs
-  Benchmark03.cs
-  Benchmark04.cs
-  CameraController.cs
-  ChatController.cs
-  DropdownSample.cs
-  EnvMapAnimator.cs
-  ObjectSpin.cs
-  ShaderPropAnimator.cs
-  SimpleScript.cs
-  SkewTextExample.cs
-  TeleType.cs
-  TextConsoleSimulator.cs
-  TextMeshProFloatingText.cs
-  TextMeshSpawner.cs
-  TMPro_InstructionOverlay.cs
-  TMP_DigitValidator.cs
-  TMP_ExampleScript_01.cs
-  TMP_FrameRateCounter.cs
-  TMP_PhoneNumberValidator.cs
-  TMP_TextEventCheck.cs
-  TMP_TextEventHandler.cs
-  TMP_TextInfoDebugTool.cs
-  TMP_TextSelector_A.cs
-  TMP_TextSelector_B.cs
-  TMP_UiFrameRateCounter.cs
-  VertexColorCycler.cs
-  VertexJitter.cs
-  VertexShakeA.cs
-  VertexShakeB.cs
-  VertexZoom.cs
-  WarpTextExample.cs
+Assets/Grayboxing/
+ LoopTriggerTest.cs
+ TutorialDoor.cs
+Assets/Scripts/
+ CameraTransform.cs
+ CockroachFollow.cs
+ Decoder.cs
+ DecoderWordData.cs
+ EmissionFlicker.cs
+ GameController.cs
+ Interactable.cs
+ LargeCockroach.cs
+ LoopTrigger.cs
+ PlayerController.cs
+ Radar.cs
+ RadarPingFade.cs
+ radarPoint.cs
+ SmallCockroach.cs
+ UIController.cs
+Assets/Shaders/Pixelize & Color Depth/
+ CrunchFeature.cs
+ PixelationComponent.cs
+ PixelizeRenderFeature.cs
+Assets/TextMesh Pro/Examples & Extras/Scripts/
+ Benchmark01.cs
+ Benchmark01_UGUI.cs
+ Benchmark02.cs
+ Benchmark03.cs
+ Benchmark04.cs
+ CameraController.cs
+ ChatController.cs
+ DropdownSample.cs
+ EnvMapAnimator.cs
+ ObjectSpin.cs
+ ShaderPropAnimator.cs
+ SimpleScript.cs
+ SkewTextExample.cs
+ TeleType.cs
+ TextConsoleSimulator.cs
+ TextMeshProFloatingText.cs
+ TextMeshSpawner.cs
+ TMPro_InstructionOverlay.cs
+ TMP_DigitValidator.cs
+ TMP_ExampleScript_01.cs
+ TMP_FrameRateCounter.cs
+ TMP_PhoneNumberValidator.cs
+ TMP_TextEventCheck.cs
+ TMP_TextEventHandler.cs
+ TMP_TextInfoDebugTool.cs
+ TMP_TextSelector_A.cs
+ TMP_TextSelector_B.cs
+ TMP_UiFrameRateCounter.cs
+ VertexColorCycler.cs
+ VertexJitter.cs
+ VertexShakeA.cs
+ VertexShakeB.cs
+ VertexZoom.cs
+ WarpTextExample.cs
 obj/Debug/.NETFramework,Version=v4.7.1.AssemblyAttributes.cs
 
 [metadataReferences]

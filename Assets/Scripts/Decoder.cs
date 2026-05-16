@@ -49,7 +49,12 @@ public class Decoder : MonoBehaviour
                     Debug.Log("Interacted with Decoder");
                     UIController.Instance.ReleaseInteractText(this);
                 }
+
+                //enable the looping trigger (this is only for first build testing, will delete in the future)
+                gameObject.GetComponent<LoopTriggerTest>().DecoderTriggered();
             }
+
+            
         }
         else
         {

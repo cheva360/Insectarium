@@ -6,6 +6,8 @@ using UnityEngine.Rendering.Universal;
 
 public class LoopTrigger : MonoBehaviour
 {
+    [SerializeField]LoopTriggerTest loopTriggerTest;
+
     private bool _coroutineStarted = false;
 
     private void OnTriggerEnter(Collider other)
@@ -152,6 +154,9 @@ public class LoopTrigger : MonoBehaviour
             GameController.Instance.CurrentLoop = (GameController.LoopCount)(GameController.Instance.CurrentLoop + 1);
 
         UIController.Instance.ResetUI();
+
+        //disable looping triggering (will delete in the future)
+        loopTriggerTest.LoopTriggered();
 
         _coroutineStarted = false;
     }
