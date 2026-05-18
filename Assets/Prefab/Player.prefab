@@ -113,9 +113,10 @@ MonoBehaviour:
     type: 3}
   RadarPingParent: {fileID: 4095257897836163348}
   maxRadarDistance: 40
+  minRadarDistance: 0.12
   raycastRange: 200
   radarPingSound: {fileID: 8300000, guid: 969c5d20ecc56e348a22f21659539a14, type: 3}
-  sweepWidth: 10
+  sweepWidth: 1
   sweepHeight: 10
   redetectionAngle: 110
   rotationSpeed: 30

@@ -8,7 +8,9 @@ public class Radar : MonoBehaviour
     [SerializeField] private Transform MinimapRotate;
     [SerializeField] private GameObject RadarPingPrefab;
     [SerializeField] private GameObject RadarPingParent;
-    [SerializeField] private float maxRadarDistance = 50f;   // visual radar display radius
+    [SerializeField] private float maxRadarDistance = 50f;
+    [SerializeField] private float minRadarDistance = 0.05f;    // minimum ping distance from radar center (visual)
+    [SerializeField] private float minDetectionDistance = 3f;   // minimum world-space distance to detect an object
     [SerializeField] private float raycastRange = 100f;      // how far the boxcast actually reaches
     [SerializeField] private AudioClip radarPingSound;
     [SerializeField] private float sweepWidth = 2f;
@@ -65,7 +67,6 @@ public class Radar : MonoBehaviour
 
     private void PerformRadarSweep()
     {
-        // Use modulo only for the world direction calculation
         float absoluteAngle = (radarSweepAngle % 360f) + GameController.Instance.player.transform.eulerAngles.y;
         Vector3 sweepDirection = Quaternion.Euler(0, absoluteAngle, 0) * Vector3.forward;
         Quaternion sweepRotation = Quaternion.LookRotation(sweepDirection, Vector3.up);
@@ -77,27 +78,45 @@ public class Radar : MonoBehaviour
 
         foreach (RaycastHit hit in hits)
         {
-            if (hit.collider.CompareTag("RadarObj"))
+            if (!hit.collider.CompareTag("RadarObj"))
+                continue;
+
+            Vector3 toTarget = hit.collider.transform.position - origin;
+            toTarget.y = 0f;
+
+            if (toTarget.sqrMagnitude > 0.001f)
             {
-                bool shouldDetect = false;
+                float hitDistance = toTarget.magnitude;
 
-                if (!lastDetectionAngle.ContainsKey(hit.collider))
-                {
+                // Close objects fall inside BoxCast origin and register from any angle.
+                // Compensate by tightening the required dot the closer the object is.
+                // At raycastRange and beyond: dotThreshold = 0.5  (~60° cone, loose)
+                // At distance 0:             dotThreshold = 1.0  (must be directly in front)
+                float t = Mathf.Clamp01(hitDistance / raycastRange);
+                float dotThreshold = Mathf.Lerp(1f, 0.5f, t);
+
+                float dot = Vector3.Dot(sweepDirection, toTarget.normalized);
+                if (dot < dotThreshold)
+                    continue;
+            }
+
+            bool shouldDetect = false;
+
+            if (!lastDetectionAngle.ContainsKey(hit.collider))
+            {
+                shouldDetect = true;
+            }
+            else
+            {
+                float angleTraveled = radarSweepAngle - lastDetectionAngle[hit.collider];
+                if (angleTraveled >= redetectionAngle)
                     shouldDetect = true;
-                }
-                else
-                {
-                    // Straightforward subtraction — no wrapping ambiguity
-                    float angleTraveled = radarSweepAngle - lastDetectionAngle[hit.collider];
-                    if (angleTraveled >= redetectionAngle)
-                        shouldDetect = true;
-                }
+            }
 
-                if (shouldDetect)
-                {
-                    lastDetectionAngle[hit.collider] = radarSweepAngle;
-                    CreateRadarPing(hit.collider.transform.position);
-                }
+            if (shouldDetect)
+            {
+                lastDetectionAngle[hit.collider] = radarSweepAngle;
+                CreateRadarPing(hit.collider.transform.position);
             }
         }
     }
@@ -108,9 +127,8 @@ public class Radar : MonoBehaviour
         Vector3 directionToObject = (worldPosition - GameController.Instance.player.transform.position).normalized;
         float angle = Vector3.SignedAngle(GameController.Instance.player.transform.forward, directionToObject, Vector3.up);
 
-        // Clamp to 1 so objects beyond maxRadarDistance appear pinned at the radar edge
         float normalizedDistance = Mathf.Clamp01(distance / maxRadarDistance);
-        float radarDistance = normalizedDistance * 0.45f;
+        float radarDistance = Mathf.Max(normalizedDistance * 0.42f, minRadarDistance); // never collapses to center
 
         float angleRad = (angle + GameController.Instance.player.transform.eulerAngles.y) * Mathf.Deg2Rad;
 
