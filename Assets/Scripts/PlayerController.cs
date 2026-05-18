@@ -101,6 +101,13 @@ public class playerController : MonoBehaviour
     private Coroutine _fadeOutCoroutine;
     private float _originalVolume = 1f;
 
+    /*** [Radar Position Settings] ***/
+    [Header("Radar Position Settings")]
+    [SerializeField] private float radarBaseX = 0.3f;          // X at reference aspect ratio (16:9)
+    [SerializeField] private float radarAspectXScale = 0.15f;  // How much X shifts per unit of aspect ratio difference
+    [SerializeField] private float radarReferenceAspect = 1.7778f; // 16:9
+    /*** ***/
+
     void Start()
     {
         characterController = GetComponent<CharacterController>();
@@ -330,13 +337,25 @@ public class playerController : MonoBehaviour
         float tickDelta = radarUpdateAccumulator;
         radarUpdateAccumulator = 0f;
 
-        // Lerp radar Y based on radarHidden — same FPS as all radar animations
+        // Aspect-ratio-adjusted base X position
+        float currentAspect = (float)Screen.width / Screen.height;
+        float aspectDiff = currentAspect - radarReferenceAspect;
+        float adjustedX = radarBaseX + aspectDiff * radarAspectXScale;
+
+        // Lerp radar Y based on radarHidden
         float targetRadarY = radarHidden ? -0.8f : -0.03f;
         _radarCurrentY = Mathf.Lerp(_radarCurrentY, targetRadarY, radarHideSpeed * tickDelta);
 
         // Only apply sway and bob in Normal state
         if (currentState != playerState.Normal)
+        {
+            radar3DModel.localPosition = new Vector3(
+                adjustedX,
+                _radarCurrentY + currentBobOffset.y,
+                radarOriginalPosition.z
+            );
             return;
+        }
 
         float mouseX = _accumulatedMouseX;
         _accumulatedMouseX = 0f;
@@ -367,9 +386,8 @@ public class playerController : MonoBehaviour
 
         currentBobOffset = Vector3.Lerp(currentBobOffset, targetBobOffset, radarReturnToNeutralSpeed * tickDelta);
 
-        Vector3 swayOffset = new Vector3(radarSwayOffset, 0f, 0f);
         radar3DModel.localPosition = new Vector3(
-            radarOriginalPosition.x + swayOffset.x + currentBobOffset.x,
+            adjustedX + radarSwayOffset + currentBobOffset.x,
             _radarCurrentY + currentBobOffset.y,
             radarOriginalPosition.z + currentBobOffset.z
         );

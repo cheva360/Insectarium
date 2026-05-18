@@ -108,3 +108,5 @@ MonoBehaviour:
     steps: 29
     render_scale: 0.5
     ditherPassEvent: 600
+  pixelShader: {fileID: 4800000, guid: 18aefb670bc756345a37703f40442f5d, type: 3}
+  ditherShader: {fileID: 4800000, guid: 20e5c5c9f5c4c574d9fca2651e07206a, type: 3}
