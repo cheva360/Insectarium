@@ -77,14 +77,14 @@ Shader "Custom/PSXLit"
                 return floor(value / snapValue + 0.5) * snapValue;
             }
             
-            float3 LightingFunc(float3 normalWS, Light light, half3 n)
+            float3 LightingFunc(float3 normalWS, Light light, half3 n, float shadow)
             {
                 half3 l = normalize(light.direction);          // Light direction in world space
                 half3 r = 2.0 * dot(n, l) * n - l;                      // Reflection vector
                 half3 v = normalize(_WorldSpaceCameraPos - normalWS);   // View direction
 
                 float Ia = _k.x;                                        // Ambient intensity
-                float Id = _k.y * saturate(dot(n, l));                  // Diffuse intensity using Lambert's law
+                float Id = _k.y * saturate(dot(n, l) * shadow);                  // Diffuse intensity using Lambert's law
                 float Is = _k.z * pow(saturate(dot(r, v)), _SpecularExponent); // Specular intensity
 
                 float3 ambient = Ia * _DiffuseColor.rgb;               // Ambient lighting
@@ -93,6 +93,12 @@ Shader "Custom/PSXLit"
 
                 float3 finalColor = ambient + diffuse + specular;       // Combine all lighting components
                 return finalColor;
+            }
+            
+            half3 LotusLambert(half3 lightColor, half3 lightDir, half3 normal, float shadow)
+            {
+                half NdotL = saturate(dot(normal, lightDir) * shadow);
+                return lightColor * NdotL;
             }
             
             Varyings vert(Attributes IN)
@@ -118,20 +124,26 @@ Shader "Custom/PSXLit"
                 // gourraud (vertex) shading
                 Light light = GetMainLight();
                 half3 n = TransformObjectToWorldNormal(IN.normal);         // Convert normal to world space
-
-                OUT.color = half4(LightingFunc(worldPosition, light, n), 1.0);
                 
                 VertexPositionInputs vertexInput = GetVertexPositionInputs(IN.positionOS.xyz);
                 VertexNormalInputs normalInput = GetVertexNormalInputs(IN.normal, IN.tangentOS);
+
+                float shadow_amt = MainLightRealtimeShadow(GetShadowCoord(vertexInput));
+                OUT.color = half4(LightingFunc(worldPosition, light, n, shadow_amt), 1.0);
+                
                 
                 // additional lights
                 uint lightsCount = GetAdditionalLightsCount();
+                
                 LIGHT_LOOP_BEGIN(lightsCount)
                     Light light = GetAdditionalLight(lightIndex, vertexInput.positionWS);
+                
+                    shadow_amt = AdditionalLightRealtimeShadow(lightIndex, vertexInput.positionWS, light.direction);
                     {
                         half3 lightColor = light.color * light.distanceAttenuation;
-                        OUT.color += half4(LightingLambert(lightColor, light.direction, normalInput.normalWS), 1.0);
+                        OUT.color += half4(LotusLambert(lightColor, light.direction, normalInput.normalWS, shadow_amt), 1.0);
                     }
+                
                 LIGHT_LOOP_END
                 
                 // shadows
@@ -150,18 +162,7 @@ Shader "Custom/PSXLit"
                 half4 emission_col = SAMPLE_TEXTURE2D(_EmissionMap, sampler_EmissionMap, IN.uv) * _EmissionColor;
                 color += emission_col;
                 
-                half shadow_amt = MainLightRealtimeShadow(IN.shadowCoords);
-                
-                InputData inputData = (InputData)0;
-                inputData.positionWS = IN.positionWS;
-                
-                uint lightsCount = GetAdditionalLightsCount();
-                LIGHT_LOOP_BEGIN(lightsCount)
-                    Light light = GetAdditionalLight(lightIndex, IN.positionWS);
-                    shadow_amt *= AdditionalLightRealtimeShadow(lightIndex, IN.positionWS, light.direction);
-                LIGHT_LOOP_END
-                
-                return color * shadow_amt;
+                return color;
             }
             ENDHLSL
         }
