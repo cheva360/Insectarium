@@ -104,7 +104,7 @@ MonoBehaviour:
     colorPrecision: 32
     pixelizePassEvent: 600
   ditherSettings:
-    dither: 1
+    dither: 0
     steps: 29
     render_scale: 0.5
     ditherPassEvent: 600

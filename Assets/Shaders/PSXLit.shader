@@ -3,6 +3,10 @@ Shader "Custom/PSXLit"
     Properties
     {
         [MainColor] _DiffuseColor("Diffuse Color", Color) = (1,1,1,1)
+        
+        _Tiled ("Tiled Texture", Range(0, 1)) = 0.0
+        _TexScale ("Texture Scale", Float) = 1.0
+        
         [MainTexture] _BaseMap("Base Map", 2D) = "white" {}
         _SnapIntensity ("Snap Intensity", Range(0.0001,0.05)) = 0.0066
         _AffineOn ("Affine Mapping On", Range(0,1)) = 1
@@ -16,7 +20,7 @@ Shader "Custom/PSXLit"
 
     SubShader
     {
-        Tags { "RenderType" = "Opaque" "RenderPipeline" = "UniversalPipeline" }
+        Tags { "RenderType" = "Transparent" "RenderPipeline" = "UniversalPipeline" }
 
         Pass
         {
@@ -49,6 +53,7 @@ Shader "Custom/PSXLit"
                 float2 uv : TEXCOORD1;
                 half4 color: COLOR0;
                 float4 shadowCoords : TEXCOORD2;
+                float3 normal : NORMAL;
             };
 
             TEXTURE2D(_BaseMap);
@@ -59,6 +64,9 @@ Shader "Custom/PSXLit"
 
             CBUFFER_START(UnityPerMaterial)
                 half4 _BaseColor;
+            
+                float _Tiled;
+                float _TexScale;
                 float4 _BaseMap_ST;
             
                 half4 _EmissionColor;
@@ -149,6 +157,8 @@ Shader "Custom/PSXLit"
                 float4 shadowCoordinates = GetShadowCoord(vertexInput);
                 OUT.shadowCoords = shadowCoordinates;
                 
+                OUT.normal = IN.normal;
+                
                 return OUT;
             }
 
@@ -157,6 +167,26 @@ Shader "Custom/PSXLit"
                 half4 color = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv) * IN.color;
                 if (_AffineOn)
                     color = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv / IN.positionHCS.w) * IN.color;
+                
+                if (_Tiled)
+                {
+                    float3 uv = IN.positionWS * _TexScale;
+                    float3 Node_Blend = pow(abs(IN.normal), 1);
+                    Node_Blend /= dot(Node_Blend, 1.0);
+                    
+                    float4 Node_X = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv.zy);
+                    float4 Node_Y = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv.xz);
+                    float4 Node_Z = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv.xy);
+                    
+                    if (_AffineOn)
+                    {
+                        Node_X = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv.zy / IN.positionHCS.w);
+                        Node_Y = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv.xz / IN.positionHCS.w);
+                        Node_Z = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv.xy / IN.positionHCS.w);
+                    }
+                    
+                    return Node_X * Node_Blend.x + Node_Y * Node_Blend.y + Node_Z * Node_Blend.z;
+                }
                     
                 half4 emission_col = SAMPLE_TEXTURE2D(_EmissionMap, sampler_EmissionMap, IN.uv) * _EmissionColor;
                 color += emission_col;
