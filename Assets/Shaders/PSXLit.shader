@@ -2,12 +2,11 @@ Shader "Custom/PSXLit"
 {
     Properties
     {
-        [MainColor] _BaseColor("Base Color", Color) = (1, 1, 1, 1)
+        [MainColor] _DiffuseColor("Diffuse Color", Color) = (1,1,1,1)
         [MainTexture] _BaseMap("Base Map", 2D) = "white" {}
         _SnapIntensity ("Snap Intensity", Range(0.0001,0.05)) = 0.0066
         _AffineOn ("Affine Mapping On", Range(0,1)) = 1
         
-        _DiffuseColor("Diffuse Color", Color) = (1,1,1,1)
         _SpecularExponent("Specular Exponent", Float) = 80
         _k ("Ambient, Diffuse, Specular", Vector) = (0.5,0.5,0.8)
         
