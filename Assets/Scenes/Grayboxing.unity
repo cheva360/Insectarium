@@ -3111,7 +3111,7 @@ MonoBehaviour:
   loopOneObject: {fileID: 1343184540}
   loopTwoObject: {fileID: 917560062}
   loopThreeObject: {fileID: 719993910}
-  _currentLoop: 0
+  _currentLoop: 1
 --- !u!4 &261430169
 Transform:
   m_ObjectHideFlags: 0
@@ -6136,7 +6136,7 @@ Light:
   serializedVersion: 12
   m_Type: 0
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_Intensity: 35.1
+  m_Intensity: 20
   m_Range: 10.76
   m_SpotAngle: 65.72659
   m_InnerSpotAngle: 33.90151
@@ -12913,7 +12913,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &1343184541
 Transform:
   m_ObjectHideFlags: 0
@@ -21287,6 +21287,11 @@ PrefabInstance:
       propertyPath: casseteFlap
       value: 
       objectReference: {fileID: 280891309}
+    - target: {fileID: 1964482958959363289, guid: 31a57c2cd658fc041bfd2aa1349ebca9,
+        type: 3}
+      propertyPath: decoderLight
+      value: 
+      objectReference: {fileID: 931875491}
     - target: {fileID: 2873987304699456725, guid: 31a57c2cd658fc041bfd2aa1349ebca9,
         type: 3}
       propertyPath: m_Name
@@ -21384,8 +21389,13 @@ PrefabInstance:
       objectReference: {fileID: 682498069}
     - target: {fileID: 8771972561140255353, guid: 31a57c2cd658fc041bfd2aa1349ebca9,
         type: 3}
+      propertyPath: m_Range
+      value: 1.4412792
+      objectReference: {fileID: 0}
+    - target: {fileID: 8771972561140255353, guid: 31a57c2cd658fc041bfd2aa1349ebca9,
+        type: 3}
       propertyPath: m_Intensity
-      value: 20.9
+      value: 16
       objectReference: {fileID: 0}
     - target: {fileID: 8771972561140255353, guid: 31a57c2cd658fc041bfd2aa1349ebca9,
         type: 3}

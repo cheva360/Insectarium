@@ -25,6 +25,10 @@ public class UIController : MonoBehaviour
     public float ShakeMagnitude = 0f;
     public AudioSource DecoderAudioSource;
 
+    [Header("Entry Fill-Out")]
+    [Tooltip("How long (seconds) the latest entry and its backing take to fade their fill from 1 to 0 on cassette insert.")]
+    public float EntryFillOutDuration = 0.6f;
+
     private MonoBehaviour _currentInteractable;
     private Coroutine _decoderTypewriterCoroutine;
     private Coroutine _cursorCoroutine;
@@ -32,7 +36,15 @@ public class UIController : MonoBehaviour
     private List<string> _committedChunks = new List<string>();
     private string _currentChunk = "";
 
+    // Most recently instantiated UI entry objects
+    private GameObject _lastEntryBacking;
+    private GameObject _lastEntryCollected;
+
+    private int _fillOutPending = 0;
+
     public float CursorBlinkRate = 0.5f;
+
+    private Decoder _activeDecoder;
 
     void Awake()
     {
@@ -62,7 +74,7 @@ public class UIController : MonoBehaviour
 
     public void AddUIEntry()
     {
-        Instantiate(UIEntryBackingPrefab, UIEntryParent.transform);
+        _lastEntryBacking = Instantiate(UIEntryBackingPrefab, UIEntryParent.transform);
         UIEntryCount++;
     }
 
@@ -70,8 +82,84 @@ public class UIController : MonoBehaviour
     {
         if (UICollectedCount < UIEntryCount)
         {
-            Instantiate(UIEntryCollectedPrefab, UIEntryCollectedParent.transform);
+            _lastEntryCollected = Instantiate(UIEntryCollectedPrefab, UIEntryCollectedParent.transform);
             UICollectedCount++;
+        }
+    }
+
+    /// <summary>
+    /// Triggered when the cassette is fully inserted. Lerps the fill of the most recently
+    /// instantiated entry and its backing from 1 → 0 using a vertical sprite fill.
+    /// </summary>
+    public void TriggerLatestEntryFillOut()
+    {
+        _fillOutPending = 0;
+
+        if (_lastEntryCollected != null)
+        {
+            Image img = _lastEntryCollected.GetComponent<Image>();
+            if (img != null)
+            {
+                img.type       = Image.Type.Filled;
+                img.fillMethod = Image.FillMethod.Vertical;
+                img.fillOrigin = (int)Image.OriginVertical.Bottom;
+                img.fillAmount = 1f;
+                _fillOutPending++;
+                StartCoroutine(LerpFillToZero(img, EntryFillOutDuration));
+            }
+        }
+
+        if (_lastEntryBacking != null)
+        {
+            Image img = _lastEntryBacking.GetComponent<Image>();
+            if (img != null)
+            {
+                img.type       = Image.Type.Filled;
+                img.fillMethod = Image.FillMethod.Vertical;
+                img.fillOrigin = (int)Image.OriginVertical.Bottom;
+                img.fillAmount = 1f;
+                _fillOutPending++;
+                StartCoroutine(LerpFillToZero(img, EntryFillOutDuration));
+            }
+        }
+    }
+
+    private IEnumerator LerpFillToZero(Image image, float duration)
+    {
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            image.fillAmount = Mathf.Lerp(1f, 0f, Mathf.Clamp01(elapsed / duration));
+            yield return null;
+        }
+        image.fillAmount = 0f;
+
+        Destroy(image.gameObject);
+
+        _fillOutPending--;
+        if (_fillOutPending <= 0)
+        {
+            if (UIEntryParent != null)         UIEntryParent.SetActive(false);
+            if (UIEntryCollectedParent != null) UIEntryCollectedParent.SetActive(false);
+        }
+    }
+
+    // Add this method to set the active decoder
+    public void SetActiveDecoder(Decoder decoder)
+    {
+        _activeDecoder = decoder;
+    }
+
+    public void RestoreEntryParents()
+    {
+        if (UIEntryParent != null)         UIEntryParent.SetActive(true);
+        if (UIEntryCollectedParent != null) UIEntryCollectedParent.SetActive(true);
+
+        if (_activeDecoder != null)
+        {
+            _activeDecoder.RestoreLight();
+            _activeDecoder = null;
         }
     }
 
@@ -92,6 +180,8 @@ public class UIController : MonoBehaviour
 
         UIEntryCount = 0;
         UICollectedCount = 0;
+        _lastEntryBacking = null;
+        _lastEntryCollected = null;
     }
 
     public void PlayDecoderTypewriter(DecoderWordData wordData)
@@ -203,6 +293,9 @@ public class UIController : MonoBehaviour
 
         _isTyping = false;
         _decoderTypewriterCoroutine = null;
+
+        // Restore cassette UI now that the crosshair is about to come back
+        RestoreEntryParents();
 
         // Typewriter finished — lerp player back and restore Normal state
         playerController.Instance.ExitDialogue();

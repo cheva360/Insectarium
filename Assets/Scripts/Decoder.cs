@@ -21,6 +21,13 @@ public class Decoder : MonoBehaviour
     [Tooltip("How sensitive the mouse is when sliding the cassette (units per mouse delta).")]
     [SerializeField] private float cassetteMouseSensitivity = 0.015f;
 
+    [Header("Light Dimming")]
+    [SerializeField] private Light decoderLight;
+    [SerializeField] private float lightDimDuration = 0.8f;
+    [SerializeField] private float lightRestoreDuration = 0.8f;
+
+    private float _originalLightIntensity;
+    private Coroutine _lightCoroutine;
     private bool _sequenceStarted = false;
 
     private bool IsLookingAt()
@@ -65,6 +72,14 @@ public class Decoder : MonoBehaviour
         playerController.Instance.radarHidden = true;
         playerController.Instance.SetState(playerController.playerState.Cutscene);
 
+        // Begin dimming the light as soon as the player interacts
+        if (decoderLight != null)
+        {
+            _originalLightIntensity = decoderLight.intensity;
+            if (_lightCoroutine != null) StopCoroutine(_lightCoroutine);
+            _lightCoroutine = StartCoroutine(LerpLightIntensity(decoderLight, decoderLight.intensity, 0f, lightDimDuration));
+        }
+
         if (cassette != null)
             cassette.SetActive(true);
 
@@ -72,7 +87,6 @@ public class Decoder : MonoBehaviour
         {
             while (!playerController.Instance.LerpCameraTowardsTarget(casetteLookTarget, cameraLerpSpeed))
             {
-                // Also lerp the player position toward playerLerpTarget, same as dialogue does
                 if (playerLerpTarget != null)
                     GameController.Instance.player.transform.position = Vector3.Lerp(
                         GameController.Instance.player.transform.position,
@@ -115,14 +129,17 @@ public class Decoder : MonoBehaviour
                 if (casseteFlap != null)
                 {
                     float flapProgress = Mathf.InverseLerp(0.2f, 1f, progress);
-                    float easedFlap = 1f - Mathf.Pow(1f - flapProgress, 3f); // EaseOutCubic
+                    float easedFlap = 1f - Mathf.Pow(1f - flapProgress, 3f);
                     float zRot = Mathf.Lerp(0f, -90f, easedFlap);
                     Vector3 euler = casseteFlap.transform.localEulerAngles;
                     casseteFlap.transform.localEulerAngles = new Vector3(euler.x, euler.y, zRot);
                 }
 
                 if (lp.z >= endZ)
+                {
+                    UIController.Instance.TriggerLatestEntryFillOut();
                     break;
+                }
 
                 yield return null;
             }
@@ -133,12 +150,13 @@ public class Decoder : MonoBehaviour
 
             Destroy(cassette);
         }
-        //wait for 1 second
-        yield return new WaitForSeconds(1f);
+
+        yield return new WaitForSeconds(1.5f);
 
         // ── Phase 3: start dialogue (InDialogue state handles the camera lerp) ─
         Transform lookTarget = dialogueLookTarget != null ? dialogueLookTarget : transform;
 
+        UIController.Instance.SetActiveDecoder(this);
         UIController.Instance.PlayDecoderTypewriter(wordData);
         playerController.Instance.EnterDialogue(lookTarget, playerLerpTarget);
 
@@ -146,6 +164,29 @@ public class Decoder : MonoBehaviour
             Debug.Log("Interacted with Decoder");
 
         gameObject.GetComponent<LoopTriggerTest>().DecoderTriggered();
+    }
+
+    /// <summary>
+    /// Called by UIController when the typewriter finishes and the crosshair is restored.
+    /// </summary>
+    public void RestoreLight()
+    {
+        if (decoderLight == null) return;
+        if (_lightCoroutine != null) StopCoroutine(_lightCoroutine);
+        _lightCoroutine = StartCoroutine(LerpLightIntensity(decoderLight, decoderLight.intensity, _originalLightIntensity, lightRestoreDuration));
+    }
+
+    private IEnumerator LerpLightIntensity(Light light, float from, float to, float duration)
+    {
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            light.intensity = Mathf.Lerp(from, to, Mathf.Clamp01(elapsed / duration));
+            yield return null;
+        }
+        light.intensity = to;
+        _lightCoroutine = null;
     }
 
     private IEnumerator ReturnFlap()
