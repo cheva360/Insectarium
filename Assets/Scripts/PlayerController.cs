@@ -108,6 +108,14 @@ public class playerController : MonoBehaviour
     [SerializeField] private float radarReferenceAspect = 1.7778f; // 16:9
     /*** ***/
 
+    // Cached per-frame input
+    private Vector2 _moveInput;
+
+    // Cached screen aspect ratio (recalculated only on resolution change)
+    private float _cachedAspect;
+    private int _cachedScreenWidth;
+    private int _cachedScreenHeight;
+
     void Start()
     {
         characterController = GetComponent<CharacterController>();
@@ -128,10 +136,15 @@ public class playerController : MonoBehaviour
         }
 
         baseMoveSpeed = moveSpeed;
+
+        _cachedScreenWidth = Screen.width;
+        _cachedScreenHeight = Screen.height;
+        _cachedAspect = (float)_cachedScreenWidth / _cachedScreenHeight;
     }
 
     private Vector3 _raycastStart => cameraTransform.position;
-    private Vector3 _raycastDir => (cameraTransform.forward).normalized;
+    // Transform.forward is already normalized — no need to call .normalized again
+    private Vector3 _raycastDir => cameraTransform.forward;
 
     void Update()
     {
@@ -147,15 +160,19 @@ public class playerController : MonoBehaviour
             Cursor.visible = false;
         }
 
-        // Always apply radar Y position every frame (lerp + bob are calculated on radar tick)
-        if (radar3DModel != null)
+        // Cache move input once per frame — reused by HandleMovement, HandleRadarAnimation, IsWalking
+        _moveInput = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
+
+        // Update cached aspect ratio only when resolution changes
+        if (Screen.width != _cachedScreenWidth || Screen.height != _cachedScreenHeight)
         {
-            Vector3 pos = radar3DModel.localPosition;
-            pos.y = _radarCurrentY + currentBobOffset.y;
-            radar3DModel.localPosition = pos;
+            _cachedScreenWidth = Screen.width;
+            _cachedScreenHeight = Screen.height;
+            _cachedAspect = (float)_cachedScreenWidth / _cachedScreenHeight;
         }
 
         // Radar animation always ticks regardless of state
+        // HandleRadarAnimation now owns the full localPosition write — removed redundant per-frame Y write
         HandleRadarAnimation();
 
         switch (currentState)
@@ -293,11 +310,9 @@ public class playerController : MonoBehaviour
     {
         isGrounded = characterController.isGrounded;
 
-        float moveX = Input.GetAxisRaw("Horizontal");
-        float moveZ = Input.GetAxisRaw("Vertical");
-
+        // Use cached _moveInput instead of polling Input again
         float currentSpeed = isSprinting ? sprintSpeed : moveSpeed;
-        Vector3 move = transform.right * moveX + transform.forward * moveZ;
+        Vector3 move = transform.right * _moveInput.x + transform.forward * _moveInput.y;
         characterController.Move(move.normalized * currentSpeed * Time.deltaTime);
 
         if (isGrounded && velocity.y < 0)
@@ -331,15 +346,19 @@ public class playerController : MonoBehaviour
         float radarDeltaTime = 1f / Mathf.Max(radarUpdateFPS, 1f);
         radarUpdateAccumulator += Time.deltaTime;
 
+        // Always update Y every frame so the radar slides smoothly even between ticks
+        Vector3 continuousPos = radar3DModel.localPosition;
+        continuousPos.y = _radarCurrentY + currentBobOffset.y;
+        radar3DModel.localPosition = continuousPos;
+
         if (radarUpdateAccumulator < radarDeltaTime)
             return;
 
         float tickDelta = radarUpdateAccumulator;
         radarUpdateAccumulator = 0f;
 
-        // Aspect-ratio-adjusted base X position
-        float currentAspect = (float)Screen.width / Screen.height;
-        float aspectDiff = currentAspect - radarReferenceAspect;
+        // Use cached aspect ratio — only recalculated in Update() on resolution change
+        float aspectDiff = _cachedAspect - radarReferenceAspect;
         float adjustedX = radarBaseX + aspectDiff * radarAspectXScale;
 
         // Lerp radar Y based on radarHidden
@@ -364,9 +383,8 @@ public class playerController : MonoBehaviour
         radarSwayOffset = Mathf.SmoothDamp(radarSwayOffset, targetSwayOffset, ref radarSwayVelocity, 1f / radarSwaySmooth, Mathf.Infinity, tickDelta);
         radarSwayOffset = Mathf.Lerp(radarSwayOffset, 0f, radarSwayDamping * tickDelta);
 
-        float moveX = Input.GetAxisRaw("Horizontal");
-        float moveZ = Input.GetAxisRaw("Vertical");
-        bool isMoving = (moveX != 0 || moveZ != 0) && isGrounded;
+        // Use cached _moveInput instead of polling Input again
+        bool isMoving = (_moveInput.x != 0 || _moveInput.y != 0) && isGrounded;
 
         Vector3 targetBobOffset = Vector3.zero;
 
@@ -398,11 +416,10 @@ public class playerController : MonoBehaviour
     private int _nextFootstep = 0;
     private Coroutine _footstepCoroutine;
 
+    // Uses cached _moveInput — no extra Input.GetAxisRaw calls
     private bool IsWalking()
     {
-        float moveX = Input.GetAxisRaw("Horizontal");
-        float moveZ = Input.GetAxisRaw("Vertical");
-        Vector3 move = transform.right * moveX + transform.forward * moveZ;
+        Vector3 move = transform.right * _moveInput.x + transform.forward * _moveInput.y;
         return move.magnitude >= 0.1f && isGrounded;
     }
 
@@ -423,7 +440,9 @@ public class playerController : MonoBehaviour
 
         while (true)
         {
-            if (!IsWalking()) break;
+            // Cache walking state for this iteration to avoid double-checking
+            bool walking = IsWalking();
+            if (!walking) break;
 
             AudioClip clip = (_nextFootstep == 0) ? _footstepSound1 : _footstepSound2;
             _nextFootstep = (_nextFootstep + 1) % 2;
@@ -438,7 +457,8 @@ public class playerController : MonoBehaviour
             }
             else
             {
-                yield return null;
+                // Prevent tight infinite loop when clips are missing
+                yield return new WaitForSeconds(0.3f);
             }
 
             if (!IsWalking()) break;
@@ -462,9 +482,9 @@ public class playerController : MonoBehaviour
     private bool _isGameFocused = true;
 
     /// <summary>
-    /// Lerps the camera body and vertical rotation toward <paramref name="target"/>.
-    /// Returns <c>true</c> once the camera is close enough to be considered arrived.
-    /// Call every frame from a coroutine.
+    /// Lerps the camera body and vertical rotation toward <paramref name="target"/>
+    /// Returns <c>true</c> once the camera is close enough to be considered arrived
+    /// Call every frame from a coroutine
     /// </summary>
     public bool LerpCameraTowardsTarget(Transform target, float speed)
     {
@@ -485,8 +505,8 @@ public class playerController : MonoBehaviour
         cameraTransform.localRotation = Quaternion.Euler(verticalRotation, 0f, 0f);
 
         // Arrived?
-        bool yawClose      = Quaternion.Angle(transform.rotation, targetBodyRotation) < 1f;
-        bool pitchClose    = Mathf.Abs(verticalRotation - targetVertical) < 0.5f;
+        bool yawClose   = Quaternion.Angle(transform.rotation, targetBodyRotation) < 1f;
+        bool pitchClose = Mathf.Abs(verticalRotation - targetVertical) < 0.5f;
         return yawClose && pitchClose;
     }
 }
