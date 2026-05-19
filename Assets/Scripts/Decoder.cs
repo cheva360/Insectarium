@@ -137,7 +137,7 @@ public class Decoder : MonoBehaviour
 
                 if (lp.z >= endZ)
                 {
-                    UIController.Instance.TriggerLatestEntryFillOut();
+                    UIController.Instance.TriggerLatestEntryFillOut(destroyDelay: 1.5f);
                     break;
                 }
 
@@ -151,7 +151,7 @@ public class Decoder : MonoBehaviour
             Destroy(cassette);
         }
 
-        yield return new WaitForSeconds(1.5f);
+        yield return new WaitForSeconds(1.2f);
 
         // ── Phase 3: start dialogue (InDialogue state handles the camera lerp) ─
         Transform lookTarget = dialogueLookTarget != null ? dialogueLookTarget : transform;

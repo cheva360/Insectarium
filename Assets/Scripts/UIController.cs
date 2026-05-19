@@ -91,7 +91,7 @@ public class UIController : MonoBehaviour
     /// Triggered when the cassette is fully inserted. Lerps the fill of the most recently
     /// instantiated entry and its backing from 1 → 0 using a vertical sprite fill.
     /// </summary>
-    public void TriggerLatestEntryFillOut()
+    public void TriggerLatestEntryFillOut(float destroyDelay = 0f)
     {
         _fillOutPending = 0;
 
@@ -105,7 +105,7 @@ public class UIController : MonoBehaviour
                 img.fillOrigin = (int)Image.OriginVertical.Bottom;
                 img.fillAmount = 1f;
                 _fillOutPending++;
-                StartCoroutine(LerpFillToZero(img, EntryFillOutDuration));
+                StartCoroutine(LerpFillToZero(img, EntryFillOutDuration, destroyDelay));
             }
         }
 
@@ -119,12 +119,12 @@ public class UIController : MonoBehaviour
                 img.fillOrigin = (int)Image.OriginVertical.Bottom;
                 img.fillAmount = 1f;
                 _fillOutPending++;
-                StartCoroutine(LerpFillToZero(img, EntryFillOutDuration));
+                StartCoroutine(LerpFillToZero(img, EntryFillOutDuration, destroyDelay));
             }
         }
     }
 
-    private IEnumerator LerpFillToZero(Image image, float duration)
+    private IEnumerator LerpFillToZero(Image image, float duration, float destroyDelay = 0f)
     {
         float elapsed = 0f;
         while (elapsed < duration)
@@ -134,6 +134,9 @@ public class UIController : MonoBehaviour
             yield return null;
         }
         image.fillAmount = 0f;
+
+        if (destroyDelay > 0f)
+            yield return new WaitForSeconds(destroyDelay);
 
         Destroy(image.gameObject);
 
