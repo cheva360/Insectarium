@@ -460,4 +460,33 @@ public class playerController : MonoBehaviour
     }
 
     private bool _isGameFocused = true;
+
+    /// <summary>
+    /// Lerps the camera body and vertical rotation toward <paramref name="target"/>.
+    /// Returns <c>true</c> once the camera is close enough to be considered arrived.
+    /// Call every frame from a coroutine.
+    /// </summary>
+    public bool LerpCameraTowardsTarget(Transform target, float speed)
+    {
+        if (target == null) return true;
+
+        // Body yaw
+        Vector3 directionToTarget = (target.position - transform.position).normalized;
+        Quaternion targetBodyRotation = Quaternion.Euler(
+            0f,
+            Quaternion.LookRotation(directionToTarget, Vector3.up).eulerAngles.y,
+            0f);
+        transform.rotation = Quaternion.Slerp(transform.rotation, targetBodyRotation, speed * Time.deltaTime);
+
+        // Vertical pitch
+        float targetVertical = -Mathf.Asin(Mathf.Clamp(directionToTarget.y, -1f, 1f)) * Mathf.Rad2Deg;
+        targetVertical = Mathf.Clamp(targetVertical, -maxLookAngle, maxLookAngle);
+        verticalRotation = Mathf.Lerp(verticalRotation, targetVertical, speed * Time.deltaTime);
+        cameraTransform.localRotation = Quaternion.Euler(verticalRotation, 0f, 0f);
+
+        // Arrived?
+        bool yawClose      = Quaternion.Angle(transform.rotation, targetBodyRotation) < 1f;
+        bool pitchClose    = Mathf.Abs(verticalRotation - targetVertical) < 0.5f;
+        return yawClose && pitchClose;
+    }
 }

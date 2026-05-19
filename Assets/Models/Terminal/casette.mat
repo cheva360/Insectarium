@@ -33,7 +33,7 @@ Material:
   stringTagMap: {}
   disabledShaderPasses:
   - MOTIONVECTORS
-  m_LockedProperties: 
+  m_LockedProperties: _Tiled
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
@@ -121,7 +121,7 @@ Material:
     - _ReceiveShadows: 1
     - _Smoothness: 0.5
     - _SmoothnessTextureChannel: 0
-    - _SnapIntensity: 0.052
+    - _SnapIntensity: 0.0001
     - _SpecularExponent: 80
     - _SpecularHighlights: 1
     - _SrcBlend: 1
