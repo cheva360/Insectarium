@@ -137,7 +137,7 @@ public class Decoder : MonoBehaviour
 
                 if (lp.z >= endZ)
                 {
-                    UIController.Instance.TriggerLatestEntryFillOut(destroyDelay: 1.5f);
+                    UIController.Instance.TriggerLatestEntryFillOut(destroyDelay: 0.5f);
                     break;
                 }
 
