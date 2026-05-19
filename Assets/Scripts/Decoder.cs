@@ -61,7 +61,7 @@ public class Decoder : MonoBehaviour
 
     private IEnumerator CassetteInsertSequence()
     {
-        // ── Phase 1: lerp camera to casetteLookTarget ─────────────────────────
+        // ── Phase 1: lerp camera + player to casetteLookTarget ────────────────
         playerController.Instance.radarHidden = true;
         playerController.Instance.SetState(playerController.playerState.Cutscene);
 
@@ -71,14 +71,23 @@ public class Decoder : MonoBehaviour
         if (casetteLookTarget != null)
         {
             while (!playerController.Instance.LerpCameraTowardsTarget(casetteLookTarget, cameraLerpSpeed))
+            {
+                // Also lerp the player position toward playerLerpTarget, same as dialogue does
+                if (playerLerpTarget != null)
+                    GameController.Instance.player.transform.position = Vector3.Lerp(
+                        GameController.Instance.player.transform.position,
+                        playerLerpTarget.position,
+                        cameraLerpSpeed * Time.deltaTime);
+
                 yield return null;
+            }
         }
 
         // ── Phase 2: mouse-driven cassette slide ──────────────────────────────
         if (cassette != null)
         {
             float startZ = cassette.transform.localPosition.z;
-            float endZ   = startZ + 2f;
+            float endZ   = startZ + 1.5f;
 
             Renderer cassetteRenderer = cassette.GetComponent<Renderer>();
 
@@ -102,16 +111,14 @@ public class Decoder : MonoBehaviour
                     cassetteRenderer.material.SetFloat("_SnapIntensity", snapIntensity);
                 }
 
-                // Drive flap rotation – EaseInSine (0 → -90), starts at 20% progress
+                // Drive flap rotation – EaseOutCubic (0 → -90), starts at 20% progress
                 if (casseteFlap != null)
                 {
-                    float flapProgress = Mathf.InverseLerp(0.2f, 1f, progress); // start earlier
-                    float easedFlap = 1f - Mathf.Cos((flapProgress * Mathf.PI) / 2f); // EaseInSine
+                    float flapProgress = Mathf.InverseLerp(0.2f, 1f, progress);
+                    float easedFlap = 1f - Mathf.Pow(1f - flapProgress, 3f); // EaseOutCubic
                     float zRot = Mathf.Lerp(0f, -90f, easedFlap);
-                    casseteFlap.transform.localEulerAngles = new Vector3(
-                        casseteFlap.transform.localEulerAngles.x,
-                        casseteFlap.transform.localEulerAngles.y,
-                        zRot);
+                    Vector3 euler = casseteFlap.transform.localEulerAngles;
+                    casseteFlap.transform.localEulerAngles = new Vector3(euler.x, euler.y, zRot);
                 }
 
                 if (lp.z >= endZ)
@@ -120,32 +127,14 @@ public class Decoder : MonoBehaviour
                 yield return null;
             }
 
-            // ── Flap return: lerp back to 0 once cassette is fully inserted ──
+            // ── Flap return: run independently so Phase 3 starts without waiting ──
             if (casseteFlap != null)
-            {
-                float flapReturnSpeed = 3f;
-                float currentZ = casseteFlap.transform.localEulerAngles.z;
-                // Normalize angle from 270 (Unity's -90) back to -90 for lerping
-                if (currentZ > 180f) currentZ -= 360f;
-
-                while (Mathf.Abs(currentZ) > 0.01f)
-                {
-                    currentZ = Mathf.Lerp(currentZ, 0f, Time.deltaTime * flapReturnSpeed);
-                    casseteFlap.transform.localEulerAngles = new Vector3(
-                        casseteFlap.transform.localEulerAngles.x,
-                        casseteFlap.transform.localEulerAngles.y,
-                        currentZ);
-                    yield return null;
-                }
-
-                casseteFlap.transform.localEulerAngles = new Vector3(
-                    casseteFlap.transform.localEulerAngles.x,
-                    casseteFlap.transform.localEulerAngles.y,
-                    0f);
-            }
+                StartCoroutine(ReturnFlap());
 
             Destroy(cassette);
         }
+        //wait for 1 second
+        yield return new WaitForSeconds(1f);
 
         // ── Phase 3: start dialogue (InDialogue state handles the camera lerp) ─
         Transform lookTarget = dialogueLookTarget != null ? dialogueLookTarget : transform;
@@ -157,5 +146,26 @@ public class Decoder : MonoBehaviour
             Debug.Log("Interacted with Decoder");
 
         gameObject.GetComponent<LoopTriggerTest>().DecoderTriggered();
+    }
+
+    private IEnumerator ReturnFlap()
+    {
+        float flapReturnSpeed = 3f;
+        float elapsed = 0f;
+        float duration = 1f / flapReturnSpeed;
+        float startRot = -90f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float zRot = Mathf.Lerp(startRot, 0f, t);
+            Vector3 euler = casseteFlap.transform.localEulerAngles;
+            casseteFlap.transform.localEulerAngles = new Vector3(euler.x, euler.y, zRot);
+            yield return null;
+        }
+
+        Vector3 finalEuler = casseteFlap.transform.localEulerAngles;
+        casseteFlap.transform.localEulerAngles = new Vector3(finalEuler.x, finalEuler.y, 0f);
     }
 }

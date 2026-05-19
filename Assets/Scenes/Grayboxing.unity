@@ -21267,15 +21267,35 @@ PrefabInstance:
       propertyPath: m_SizeDelta.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1137415607896552843, guid: 31a57c2cd658fc041bfd2aa1349ebca9,
+        type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1219298971987568106, guid: 31a57c2cd658fc041bfd2aa1349ebca9,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 1964482958959363289, guid: 31a57c2cd658fc041bfd2aa1349ebca9,
         type: 3}
       propertyPath: cassette
       value: 
       objectReference: {fileID: 2075419936}
+    - target: {fileID: 1964482958959363289, guid: 31a57c2cd658fc041bfd2aa1349ebca9,
+        type: 3}
+      propertyPath: casseteFlap
+      value: 
+      objectReference: {fileID: 280891309}
     - target: {fileID: 2873987304699456725, guid: 31a57c2cd658fc041bfd2aa1349ebca9,
         type: 3}
       propertyPath: m_Name
       value: Terminal2
+      objectReference: {fileID: 0}
+    - target: {fileID: 2874721722649671517, guid: 31a57c2cd658fc041bfd2aa1349ebca9,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3218284375488050799, guid: 31a57c2cd658fc041bfd2aa1349ebca9,
         type: 3}
@@ -21362,6 +21382,21 @@ PrefabInstance:
       propertyPath: trigger
       value: 
       objectReference: {fileID: 682498069}
+    - target: {fileID: 8771972561140255353, guid: 31a57c2cd658fc041bfd2aa1349ebca9,
+        type: 3}
+      propertyPath: m_Intensity
+      value: 20.9
+      objectReference: {fileID: 0}
+    - target: {fileID: 8771972561140255353, guid: 31a57c2cd658fc041bfd2aa1349ebca9,
+        type: 3}
+      propertyPath: m_SpotAngle
+      value: 89.50006
+      objectReference: {fileID: 0}
+    - target: {fileID: 8771972561140255353, guid: 31a57c2cd658fc041bfd2aa1349ebca9,
+        type: 3}
+      propertyPath: m_InnerSpotAngle
+      value: 57.57652
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects:
     - {fileID: 3459308736871550078, guid: 31a57c2cd658fc041bfd2aa1349ebca9, type: 3}

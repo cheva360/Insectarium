@@ -217,13 +217,18 @@ public class UIController : MonoBehaviour
         bool inDialogue = playerController.Instance != null &&
                           playerController.Instance.CurrentState == playerController.playerState.InDialogue;
 
-        if (inDialogue)
+        bool inCutscene = playerController.Instance != null &&
+                          playerController.Instance.CurrentState == playerController.playerState.Cutscene;
+
+        bool hideUI = inDialogue || inCutscene;
+
+        if (hideUI)
         {
             _currentInteractable = null;
             InteractText.text = "";
         }
 
         if (CursorImage != null)
-            CursorImage.enabled = !inDialogue;
+            CursorImage.enabled = !hideUI;
     }
 }
