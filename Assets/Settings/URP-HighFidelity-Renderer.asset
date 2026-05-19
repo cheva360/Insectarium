@@ -96,7 +96,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c456b1b186d1cda44885132de4040344, type: 3}
   m_Name: PixelizeRenderFeature
   m_EditorClassIdentifier: Assembly-CSharp::PixelizeRenderFeature
-  m_Active: 0
+  m_Active: 1
   pixelSettings:
     pixelize: 1
     widthPixelation: 256
