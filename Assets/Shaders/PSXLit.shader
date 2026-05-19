@@ -8,7 +8,7 @@ Shader "Custom/PSXLit"
         _TexScale ("Texture Scale", Float) = 1.0
         
         [MainTexture] _BaseMap("Base Map", 2D) = "white" {}
-        _SnapIntensity ("Snap Intensity", Range(0.0001,0.05)) = 0.0066
+        _SnapIntensity ("Snap Intensity", Range(0.0001,0.1)) = 0.0066
         _AffineOn ("Affine Mapping On", Range(0,1)) = 1
         
         _SpecularExponent("Specular Exponent", Float) = 80
