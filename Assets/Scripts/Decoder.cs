@@ -102,10 +102,11 @@ public class Decoder : MonoBehaviour
                     cassetteRenderer.material.SetFloat("_SnapIntensity", snapIntensity);
                 }
 
-                // Drive flap rotation – EaseInQuart (0 → -90)
+                // Drive flap rotation – EaseInSine (0 → -90), starts at 20% progress
                 if (casseteFlap != null)
                 {
-                    float easedFlap = Mathf.Pow(progress, 4f); // EaseInQuart
+                    float flapProgress = Mathf.InverseLerp(0.2f, 1f, progress); // start earlier
+                    float easedFlap = 1f - Mathf.Cos((flapProgress * Mathf.PI) / 2f); // EaseInSine
                     float zRot = Mathf.Lerp(0f, -90f, easedFlap);
                     casseteFlap.transform.localEulerAngles = new Vector3(
                         casseteFlap.transform.localEulerAngles.x,
