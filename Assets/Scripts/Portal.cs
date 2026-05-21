@@ -146,7 +146,7 @@ public class Portal : MonoBehaviour
 
         if (_prevDistValid)
         {
-            const float teleportThreshold = 0.01f;
+            const float teleportThreshold = 0.035f;
             bool crossedThreshold = _prevSignedDist <= -teleportThreshold &&
                                     signedDist >  -teleportThreshold;
 
@@ -248,7 +248,7 @@ public class Portal : MonoBehaviour
         Quaternion newRot = TransformRotationThroughPortal(transform, linkedPortal.transform, _playerTransform.rotation);
 
         // Keep this small. Large values cause black edges and overpush the player.
-        const float exitOffset = -0.015f;
+        const float exitOffset = -0.055f;
         newPos += linkedPortal.transform.forward * exitOffset;
 
         var cc = pc.GetComponent<CharacterController>();

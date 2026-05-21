@@ -6133,7 +6133,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Portal
   linkedPortal: {fileID: 1528835365}
-  renderScale: 0.05
+  renderScale: 0.2
   renderPortalShadows: 1
   portalCullingMask:
     serializedVersion: 2
@@ -15714,7 +15714,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Portal
   linkedPortal: {fileID: 613507434}
-  renderScale: 0.05
+  renderScale: 0.2
   renderPortalShadows: 1
   portalCullingMask:
     serializedVersion: 2
