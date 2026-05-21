@@ -30,24 +30,29 @@ public class PortalManager : MonoBehaviour
         _portals.Remove(portal);
     }
 
+    // Called by PortalRenderFeature to iterate portals this frame.
+    public IReadOnlyList<Portal> GetPortals() => _portals;
+
     // Called from Update() — runs teleports first, then updates RT positions.
     // Keeping both in Update() ensures transforms are stable for the entire frame.
     private void Update()
     {
-        // Pass 1 — check for crossings and execute any pending teleport.
-        // Teleporting here (game logic time) means all scene objects, UI, and
-        // shadow casters see the new position consistently for this frame's render.
         foreach (var portal in _portals)
             portal.CheckTeleportThisFrame();
     }
 
-    // Render callback — only used to position and render the portal cameras
-    // immediately before the player camera renders. No transforms are moved here.
+    // Renders all exit cameras to their RTs immediately before the player
+    // camera renders, so the RTs are current when the render feature blits them.
     private void OnBeginCameraRendering(ScriptableRenderContext ctx, Camera cam)
     {
         if (cam != playerController.Instance?.playerCamera) return;
 
         foreach (var portal in _portals)
+        {
+            if (!portal.ShouldRender())
+                continue;
+
             portal.RenderPortalCamera();
+        }
     }
 }

@@ -1,35 +1,79 @@
-using System.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
-[RequireComponent(typeof(MeshRenderer))]
+[RequireComponent(typeof(MeshRenderer), typeof(MeshFilter))]
 public class Portal : MonoBehaviour
 {
     [Header("Portal Pair")]
     [Tooltip("The other portal this one is linked to.")]
     public Portal linkedPortal;
 
-    private Camera        _portalCam;
-    private RenderTexture _renderTexture;
-    private MeshRenderer  _meshRenderer;
-    private Material      _portalMaterial;
-    private Collider      _portalCollider;
+    [Header("Performance")]
+    [Range(0.15f, 1f)]
+    [SerializeField] private float renderScale = 0.5f;
+    [SerializeField] private bool renderPortalShadows = false;
+    [SerializeField] private LayerMask portalCullingMask = ~0;
 
-    private Transform _playerTransform;
-    private Camera    _playerCam;
+    private Camera        _portalCam;
+    private RenderTexture _rt;
+    private MeshRenderer  _meshRenderer;
+    private MeshFilter    _meshFilter;
+    private Collider      _portalCollider;
+    private Transform     _playerTransform;
+    private Camera        _playerCam;
 
     private float _prevSignedDist;
     private bool  _prevDistValid;
-
     private float _teleportCooldown;
-    private const float CooldownDuration = 0.3f;
+    private const float CooldownDuration = 0.05f;
+    private const float CooldownClearDistance = 0.2f;
 
     private static readonly int MainTexId = Shader.PropertyToID("_MainTex");
 
+    // ── Public surface for PortalRenderFeature ────────────────────────────────
+    public RenderTexture ExitRT     => _rt;
+    public Mesh          PortalMesh => _meshFilter.sharedMesh;
+    public bool          IsReady    => linkedPortal != null && _rt != null && _portalCam != null && ViewMaterial != null;
+    public Material      ViewMaterial { get; private set; }
+
+    // Cached per-frame straddle state — set by PortalManager.Update() after all
+    // teleport checks, so it is identical for RenderPortalCamera() and the render
+    // feature. Never recomputed mid-frame.
+    public bool IsPlayerStraddling { get; private set; }
+
+    internal void UpdateStraddleState()
+    {
+        if (_playerCam == null) { IsPlayerStraddling = false; return; }
+
+        Vector3 camPos = _playerCam.transform.position;
+        float dist = Vector3.Dot(transform.forward, camPos - transform.position);
+        if (Mathf.Abs(dist) >= 0.3f) { IsPlayerStraddling = false; return; }
+
+        Vector3 local = transform.InverseTransformPoint(camPos);
+        IsPlayerStraddling = Mathf.Abs(local.x) <= 1.1f && Mathf.Abs(local.y) <= 1.1f;
+    }
+
+    internal void ClearStraddleState()
+    {
+        IsPlayerStraddling = false;
+    }
+
+    // Called by PortalRenderFeature once its view shader is ready.
+    // Creates a per-portal material instance with the RT already baked in so
+    // the render feature never needs SetGlobalTexture.
+    public void SetViewShader(Shader viewShader)
+    {
+        if (ViewMaterial != null) CoreUtils.Destroy(ViewMaterial);
+        ViewMaterial = new Material(viewShader) { hideFlags = HideFlags.HideAndDontSave };
+        ViewMaterial.SetTexture(MainTexId, _rt);
+    }
+
+    // ── Lifecycle ─────────────────────────────────────────────────────────────
     private void Awake()
     {
         _meshRenderer   = GetComponent<MeshRenderer>();
+        _meshFilter     = GetComponent<MeshFilter>();
         _portalCollider = GetComponent<Collider>();
     }
 
@@ -39,14 +83,16 @@ public class Portal : MonoBehaviour
         _playerTransform = pc.transform;
         _playerCam       = pc.playerCamera;
 
-        // Put this portal on the Portal layer so portal cameras can exclude it
-        // from their culling mask — prevents the back-face feedback artifact
-        // without any mesh hiding or flickering.
+        // Portal layer keeps portal cameras from seeing portal meshes,
+        // preventing RT feedback loops.
         gameObject.layer = LayerMask.NameToLayer("Portal");
+
+        // The render feature owns all portal drawing via stencil passes.
+        // Disable the MeshRenderer so the quad doesn't render as geometry.
+        _meshRenderer.enabled = false;
 
         CreatePortalCamera();
         CreateRenderTexture();
-        AssignMaterial();
 
         if (_portalCollider != null)
         {
@@ -61,36 +107,50 @@ public class Portal : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (_renderTexture != null) { _renderTexture.Release(); Destroy(_renderTexture); }
-        if (_portalMaterial != null) Destroy(_portalMaterial);
-        if (_portalCam      != null) Destroy(_portalCam.gameObject);
+        if (_rt != null)       { _rt.Release(); Destroy(_rt); }
+        if (_portalCam != null) Destroy(_portalCam.gameObject);
         PortalManager.Instance?.Unregister(this);
     }
 
+    private void OnValidate()
+    {
+        if (_portalCam == null) return;
+
+        _portalCam.cullingMask = portalCullingMask & ~LayerMask.GetMask("Portal");
+
+        var portalURP = _portalCam.GetUniversalAdditionalCameraData();
+        portalURP.renderShadows = renderPortalShadows;
+    }
+
     // ── Teleport check — called by PortalManager.Update() ────────────────────
-    // Runs in game logic time so the teleport is fully committed before any
-    // rendering occurs this frame. This prevents UI/scene flicker.
     internal void CheckTeleportThisFrame()
     {
         if (linkedPortal == null) return;
 
+        float signedDist = SignedDist(transform, _playerCam.transform.position);
+        bool insideBounds = IsInsidePortalBounds(_playerCam.transform.position);
+
         if (_teleportCooldown > 0f)
         {
             _teleportCooldown -= Time.deltaTime;
-            _prevSignedDist = SignedDist(transform, _playerCam.transform.position);
+
+            // Re-arm teleport as soon as the player has clearly moved away from this
+            // portal, instead of waiting out the full timer every time.
+            if (Mathf.Abs(signedDist) > CooldownClearDistance || !insideBounds)
+                _teleportCooldown = 0f;
+
+            _prevSignedDist = signedDist;
             _prevDistValid  = true;
             return;
         }
 
-        float signedDist = SignedDist(transform, _playerCam.transform.position);
-
         if (_prevDistValid)
         {
-            const float teleportThreshold = 0.1f;
-            bool crossedThreshold = _prevSignedDist <= -teleportThreshold && signedDist > -teleportThreshold;
-            bool crossedZero      = _prevSignedDist < 0f && signedDist >= 0f;
+            const float teleportThreshold = 0.01f;
+            bool crossedThreshold = _prevSignedDist <= -teleportThreshold &&
+                                    signedDist >  -teleportThreshold;
 
-            if ((crossedThreshold || crossedZero) && IsInsidePortalBounds(_playerCam.transform.position))
+            if (crossedThreshold && insideBounds)
             {
                 TeleportPlayer();
                 return;
@@ -101,7 +161,7 @@ public class Portal : MonoBehaviour
         _prevDistValid  = true;
     }
 
-    // ── Render — called by PortalManager.OnBeginCameraRendering() ─────────────
+    // ── Exit camera render ────────────────────────────────────────────────────
     public void RenderPortalCamera()
     {
         if (linkedPortal == null || _portalCam == null) return;
@@ -109,8 +169,8 @@ public class Portal : MonoBehaviour
         EnsureRenderTextureMatchesScreen();
 
         _portalCam.transform.SetPositionAndRotation(
-            TransformPointThroughPortal(linkedPortal.transform, transform, _playerCam.transform.position),
-            TransformRotationThroughPortal(linkedPortal.transform, transform, _playerCam.transform.rotation)
+            TransformPointThroughPortal(transform, linkedPortal.transform, _playerCam.transform.position),
+            TransformRotationThroughPortal(transform, linkedPortal.transform, _playerCam.transform.rotation)
         );
 
         _portalCam.projectionMatrix = _playerCam.projectionMatrix;
@@ -122,30 +182,60 @@ public class Portal : MonoBehaviour
     }
 
     // ── Render texture ────────────────────────────────────────────────────────
-    private void EnsureRenderTextureMatchesScreen()
+    private void CreatePortalCamera()
     {
-        int w = Screen.width;
-        int h = Screen.height;
+        var go = new GameObject($"PortalCam_{name}", typeof(Camera));
+        go.transform.SetParent(transform, false);
+        go.AddComponent<PortalCameraMarker>();
 
-        if (_renderTexture != null &&
-            _renderTexture.width  == w &&
-            _renderTexture.height == h)
-            return;
+        _portalCam = go.GetComponent<Camera>();
+        _portalCam.enabled             = false;
+        _portalCam.clearFlags          = CameraClearFlags.SolidColor;
+        _portalCam.backgroundColor     = Color.black;
+        _portalCam.allowHDR            = false;
+        _portalCam.allowMSAA           = false;
+        _portalCam.useOcclusionCulling = true;
 
-        if (_renderTexture != null)
-        {
-            _portalCam.targetTexture = null;
-            _renderTexture.Release();
-            Destroy(_renderTexture);
-        }
+        // Use a dedicated culling mask for portal renders, but never allow the
+        // Portal layer itself or the portal cameras will see portal surfaces and
+        // create feedback / recursion artifacts.
+        _portalCam.cullingMask = portalCullingMask & ~LayerMask.GetMask("Portal");
 
-        _renderTexture = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32)
+        var portalURP = _portalCam.GetUniversalAdditionalCameraData();
+        portalURP.renderType           = CameraRenderType.Base;
+        portalURP.renderPostProcessing = false;
+        portalURP.renderShadows        = renderPortalShadows;
+        portalURP.antialiasing         = AntialiasingMode.None;
+    }
+
+    private void CreateRenderTexture()
+    {
+        int w = Mathf.Max(1, Mathf.RoundToInt(Screen.width  * renderScale));
+        int h = Mathf.Max(1, Mathf.RoundToInt(Screen.height * renderScale));
+
+        _rt = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32)
         {
             name = $"PortalRT_{name}"
         };
-        _renderTexture.Create();
-        _portalCam.targetTexture = _renderTexture;
-        _portalMaterial.SetTexture(MainTexId, _renderTexture);
+        _rt.Create();
+        _portalCam.targetTexture = _rt;
+    }
+
+    private void EnsureRenderTextureMatchesScreen()
+    {
+        int w = Mathf.Max(1, Mathf.RoundToInt(Screen.width  * renderScale));
+        int h = Mathf.Max(1, Mathf.RoundToInt(Screen.height * renderScale));
+        if (_rt != null && _rt.width == w && _rt.height == h) return;
+
+        if (_rt != null) { _portalCam.targetTexture = null; _rt.Release(); Destroy(_rt); }
+
+        _rt = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32) { name = $"PortalRT_{name}" };
+        _rt.Create();
+        _portalCam.targetTexture = _rt;
+
+        // Keep the per-portal view material in sync with the new RT
+        if (ViewMaterial != null)
+            ViewMaterial.SetTexture(Shader.PropertyToID("_MainTex"), _rt);
     }
 
     // ── Teleport ──────────────────────────────────────────────────────────────
@@ -157,8 +247,9 @@ public class Portal : MonoBehaviour
         Vector3    newPos = TransformPointThroughPortal(transform, linkedPortal.transform, _playerTransform.position);
         Quaternion newRot = TransformRotationThroughPortal(transform, linkedPortal.transform, _playerTransform.rotation);
 
-        const float exitOffset = 0.15f;
-        newPos -= linkedPortal.transform.forward * exitOffset;
+        // Keep this small. Large values cause black edges and overpush the player.
+        const float exitOffset = -0.015f;
+        newPos += linkedPortal.transform.forward * exitOffset;
 
         var cc = pc.GetComponent<CharacterController>();
         cc.enabled = false;
@@ -171,85 +262,34 @@ public class Portal : MonoBehaviour
 
         _prevDistValid    = false;
         _teleportCooldown = CooldownDuration;
-
         linkedPortal._prevDistValid    = false;
         linkedPortal._teleportCooldown = CooldownDuration;
-    }
-
-    internal IEnumerator HideMeshForOneFrame()
-    {
-        _meshRenderer.enabled = false;
-        yield return null;
-        _meshRenderer.enabled = true;
-    }
-
-    // ── Setup helpers ─────────────────────────────────────────────────────────
-    private void CreatePortalCamera()
-    {
-        var go = new GameObject($"PortalCam_{name}", typeof(Camera));
-        go.transform.SetParent(transform, false);
-
-        go.AddComponent<PortalCameraMarker>();
-
-        _portalCam = go.GetComponent<Camera>();
-        _portalCam.enabled         = false;
-        _portalCam.clearFlags      = CameraClearFlags.SolidColor;
-        _portalCam.backgroundColor = Color.black;
-
-        // Exclude the Portal layer from the portal camera's culling mask.
-        // This means portal camera A never sees portal mesh B (the linked portal),
-        // eliminating the back-face feedback loop entirely — no mesh hiding needed.
-        _portalCam.cullingMask = _playerCam != null
-            ? _playerCam.cullingMask & ~LayerMask.GetMask("Portal")
-            : Camera.main.cullingMask & ~LayerMask.GetMask("Portal");
-
-        var playerURP = _playerCam != null ? _playerCam.GetUniversalAdditionalCameraData() : null;
-        var portalURP = _portalCam.GetUniversalAdditionalCameraData();
-        portalURP.renderType           = CameraRenderType.Base;
-        portalURP.renderPostProcessing = false;
-        if (playerURP != null)
-        {
-            portalURP.renderShadows = playerURP.renderShadows;
-            portalURP.antialiasing  = AntialiasingMode.None;
-        }
-    }
-
-    private void CreateRenderTexture()
-    {
-        _renderTexture = new RenderTexture(Screen.width, Screen.height, 24, RenderTextureFormat.ARGB32)
-        {
-            name = $"PortalRT_{name}"
-        };
-        _renderTexture.Create();
-        _portalCam.targetTexture = _renderTexture;
-    }
-
-    private void AssignMaterial()
-    {
-        var shader = Shader.Find("Custom/Portal");
-        if (shader == null)
-        {
-            Debug.LogError("[Portal] Shader 'Custom/Portal' not found.");
-            return;
-        }
-        _portalMaterial = new Material(shader);
-        _portalMaterial.SetTexture(MainTexId, _renderTexture);
-        _meshRenderer.material = _portalMaterial;
     }
 
     // ── Oblique near-clip ─────────────────────────────────────────────────────
     private void ApplyObliqueNearClip()
     {
-        Transform clipPlane = linkedPortal.transform;
-        int side = System.Math.Sign(
-            Vector3.Dot(clipPlane.forward, clipPlane.position - _portalCam.transform.position));
+        Transform exit = linkedPortal.transform;
 
-        Vector3 camSpacePos    = _portalCam.worldToCameraMatrix.MultiplyPoint(clipPlane.position);
-        Vector3 camSpaceNormal = _portalCam.worldToCameraMatrix.MultiplyVector(clipPlane.forward) * side;
-        float   camSpaceDist   = -Vector3.Dot(camSpacePos, camSpaceNormal) + 0.01f;
+        // The portal camera is always on the BACK side of the exit portal
+        // (-exit.forward side), because TransformPointThroughPortal flips 180°.
+        // The oblique clip plane must point TOWARD the camera (i.e. -exit.forward)
+        // so that geometry between the camera and the exit surface is clipped,
+        // and everything visible through the portal opening is kept.
+        // Using +exit.forward does the opposite — clips the visible scene, leaving black.
+        const float clipBias = 0.005f;
 
-        _portalCam.projectionMatrix = _portalCam.CalculateObliqueMatrix(
-            new Vector4(camSpaceNormal.x, camSpaceNormal.y, camSpaceNormal.z, camSpaceDist));
+        // Normal = -exit.forward (facing the camera behind the exit portal).
+        // Origin is inset slightly toward the camera to avoid clipping the portal
+        // surface itself and to stay stable at the midpoint.
+        Plane p = new Plane(-exit.forward, exit.position + exit.forward * clipBias);
+
+        Vector4 clipPlane = new Vector4(p.normal.x, p.normal.y, p.normal.z, p.distance);
+
+        Vector4 clipPlaneCameraSpace =
+            Matrix4x4.Transpose(Matrix4x4.Inverse(_portalCam.worldToCameraMatrix)) * clipPlane;
+
+        _portalCam.projectionMatrix = _playerCam.CalculateObliqueMatrix(clipPlaneCameraSpace);
     }
 
     // ── Math helpers ──────────────────────────────────────────────────────────
@@ -270,4 +310,45 @@ public class Portal : MonoBehaviour
 
     private static readonly Quaternion FlipRotation = Quaternion.Euler(0f, 180f, 0f);
     private static readonly Matrix4x4  FlipMatrix   = Matrix4x4.TRS(Vector3.zero, FlipRotation, Vector3.one);
+
+    public bool ShouldRender()
+    {
+        if (linkedPortal == null || _playerCam == null) return false;
+
+        // Never cull while the player is right on the portal.
+        float signedDist = SignedDist(transform, _playerCam.transform.position);
+        if (Mathf.Abs(signedDist) <= 0.2f && IsInsidePortalBounds(_playerCam.transform.position))
+            return true;
+
+        Vector3 toPortal = transform.position - _playerCam.transform.position;
+
+        // Skip portals behind the player.
+        if (Vector3.Dot(_playerCam.transform.forward, toPortal) <= 0f)
+            return false;
+
+        // Skip portals outside the camera frustum.
+        Plane[] planes = GeometryUtility.CalculateFrustumPlanes(_playerCam);
+        Bounds bounds = _meshFilter != null && _meshFilter.sharedMesh != null
+            ? _meshFilter.sharedMesh.bounds
+            : new Bounds(Vector3.zero, Vector3.one);
+        bounds = TransformBounds(bounds, transform.localToWorldMatrix);
+
+        return GeometryUtility.TestPlanesAABB(planes, bounds);
+    }
+
+    private static Bounds TransformBounds(Bounds localBounds, Matrix4x4 localToWorld)
+    {
+        Vector3 center = localToWorld.MultiplyPoint3x4(localBounds.center);
+        Vector3 extents = localBounds.extents;
+
+        Vector3 axisX = localToWorld.MultiplyVector(new Vector3(extents.x, 0f, 0f));
+        Vector3 axisY = localToWorld.MultiplyVector(new Vector3(0f, extents.y, 0f));
+        Vector3 axisZ = localToWorld.MultiplyVector(new Vector3(0f, 0f, extents.z));
+
+        extents.x = Mathf.Abs(axisX.x) + Mathf.Abs(axisY.x) + Mathf.Abs(axisZ.x);
+        extents.y = Mathf.Abs(axisX.y) + Mathf.Abs(axisY.y) + Mathf.Abs(axisZ.y);
+        extents.z = Mathf.Abs(axisX.z) + Mathf.Abs(axisY.z) + Mathf.Abs(axisZ.z);
+
+        return new Bounds(center, extents * 2f);
+    }
 }
