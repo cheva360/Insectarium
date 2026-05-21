@@ -154,6 +154,9 @@ public class PixelizeRenderFeature : ScriptableRendererFeature
     // This method is called when setting up the renderer once per-camera.
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
     {
+        // Skip portal cameras was breaking it
+        if (renderingData.cameraData.camera.GetComponent<PortalCameraMarker>() != null)
+            return;
 
         if (pixelationMaterial == null || ditherMaterial == null)
         {
@@ -175,15 +178,10 @@ public class PixelizeRenderFeature : ScriptableRendererFeature
         pixelPass.Setup(ref pixelSettings, ref pixelationMaterial);
         ditherPass.Setup(ref ditherSettings, ref ditherMaterial);
 
-        // renderingData.cameraData.camera.depthTextureMode =
-        //    renderingData.cameraData.camera.depthTextureMode | DepthTextureMode.Depth;
-
-
         if (pixelSettings.pixelize)
             renderer.EnqueuePass(pixelPass);
         if (ditherSettings.dither)
             renderer.EnqueuePass(ditherPass);
-
     }
 }
 

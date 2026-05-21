@@ -59,12 +59,6 @@ public class playerController : MonoBehaviour
     private float _preDialogueVerticalRotation;
     private Coroutine _exitDialogueCoroutine;
 
-    //[Header("Sprint Settings")]
-    //[SerializeField] private float sprintDuration = 2f;
-    //[SerializeField] private Image SprintBar;
-    //[SerializeField] private Image SprintBarBackground;
-    //[SerializeField] private float alphaBlinkSpeed = 2f;
-
     public float Sprint = 1f;
     private bool CanSprint;
     private bool isSprinting = false;
@@ -87,6 +81,9 @@ public class playerController : MonoBehaviour
     private bool _isPlayingFootsteps = false;
     private Vector3 _raycastHitLocation;
 
+    // Portal: skip one movement frame after teleport to prevent forward boost
+    private bool _skipMovementThisFrame = false;
+
     // Radar animation variables
     private Vector3 radarOriginalPosition;
     private float radarSwayOffset = 0f;
@@ -103,9 +100,9 @@ public class playerController : MonoBehaviour
 
     /*** [Radar Position Settings] ***/
     [Header("Radar Position Settings")]
-    [SerializeField] private float radarBaseX = 0.3f;          // X at reference aspect ratio (16:9)
-    [SerializeField] private float radarAspectXScale = 0.15f;  // How much X shifts per unit of aspect ratio difference
-    [SerializeField] private float radarReferenceAspect = 1.7778f; // 16:9
+    [SerializeField] private float radarBaseX = 0.3f;
+    [SerializeField] private float radarAspectXScale = 0.15f;
+    [SerializeField] private float radarReferenceAspect = 1.7778f;
     /*** ***/
 
     // Cached per-frame input
@@ -143,7 +140,6 @@ public class playerController : MonoBehaviour
     }
 
     private Vector3 _raycastStart => cameraTransform.position;
-    // Transform.forward is already normalized — no need to call .normalized again
     private Vector3 _raycastDir => cameraTransform.forward;
 
     void Update()
@@ -172,7 +168,6 @@ public class playerController : MonoBehaviour
         }
 
         // Radar animation always ticks regardless of state
-        // HandleRadarAnimation now owns the full localPosition write — removed redundant per-frame Y write
         HandleRadarAnimation();
 
         switch (currentState)
@@ -308,9 +303,18 @@ public class playerController : MonoBehaviour
 
     private void HandleMovement()
     {
+        // Skip one frame after a portal teleport to avoid the boost caused by
+        // the old input vector being applied in the new exit orientation.
+        if (_skipMovementThisFrame)
+        {
+            _skipMovementThisFrame = false;
+            if (characterController.isGrounded && velocity.y < 0)
+                velocity.y = -2f;
+            return;
+        }
+
         isGrounded = characterController.isGrounded;
 
-        // Use cached _moveInput instead of polling Input again
         float currentSpeed = isSprinting ? sprintSpeed : moveSpeed;
         Vector3 move = transform.right * _moveInput.x + transform.forward * _moveInput.y;
         characterController.Move(move.normalized * currentSpeed * Time.deltaTime);
@@ -357,11 +361,9 @@ public class playerController : MonoBehaviour
         float tickDelta = radarUpdateAccumulator;
         radarUpdateAccumulator = 0f;
 
-        // Use cached aspect ratio — only recalculated in Update() on resolution change
         float aspectDiff = _cachedAspect - radarReferenceAspect;
         float adjustedX = radarBaseX + aspectDiff * radarAspectXScale;
 
-        // Lerp radar Y based on radarHidden
         float targetRadarY = radarHidden ? -0.8f : -0.03f;
         _radarCurrentY = Mathf.Lerp(_radarCurrentY, targetRadarY, radarHideSpeed * tickDelta);
 
@@ -383,7 +385,6 @@ public class playerController : MonoBehaviour
         radarSwayOffset = Mathf.SmoothDamp(radarSwayOffset, targetSwayOffset, ref radarSwayVelocity, 1f / radarSwaySmooth, Mathf.Infinity, tickDelta);
         radarSwayOffset = Mathf.Lerp(radarSwayOffset, 0f, radarSwayDamping * tickDelta);
 
-        // Use cached _moveInput instead of polling Input again
         bool isMoving = (_moveInput.x != 0 || _moveInput.y != 0) && isGrounded;
 
         Vector3 targetBobOffset = Vector3.zero;
@@ -416,7 +417,6 @@ public class playerController : MonoBehaviour
     private int _nextFootstep = 0;
     private Coroutine _footstepCoroutine;
 
-    // Uses cached _moveInput — no extra Input.GetAxisRaw calls
     private bool IsWalking()
     {
         Vector3 move = transform.right * _moveInput.x + transform.forward * _moveInput.y;
@@ -440,7 +440,6 @@ public class playerController : MonoBehaviour
 
         while (true)
         {
-            // Cache walking state for this iteration to avoid double-checking
             bool walking = IsWalking();
             if (!walking) break;
 
@@ -457,7 +456,6 @@ public class playerController : MonoBehaviour
             }
             else
             {
-                // Prevent tight infinite loop when clips are missing
                 yield return new WaitForSeconds(0.3f);
             }
 
@@ -482,15 +480,14 @@ public class playerController : MonoBehaviour
     private bool _isGameFocused = true;
 
     /// <summary>
-    /// Lerps the camera body and vertical rotation toward <paramref name="target"/>
-    /// Returns <c>true</c> once the camera is close enough to be considered arrived
-    /// Call every frame from a coroutine
+    /// Lerps the camera body and vertical rotation toward <paramref name="target"/>.
+    /// Returns <c>true</c> once the camera is close enough to be considered arrived.
+    /// Call every frame from a coroutine.
     /// </summary>
     public bool LerpCameraTowardsTarget(Transform target, float speed)
     {
         if (target == null) return true;
 
-        // Body yaw
         Vector3 directionToTarget = (target.position - transform.position).normalized;
         Quaternion targetBodyRotation = Quaternion.Euler(
             0f,
@@ -498,15 +495,42 @@ public class playerController : MonoBehaviour
             0f);
         transform.rotation = Quaternion.Slerp(transform.rotation, targetBodyRotation, speed * Time.deltaTime);
 
-        // Vertical pitch
         float targetVertical = -Mathf.Asin(Mathf.Clamp(directionToTarget.y, -1f, 1f)) * Mathf.Rad2Deg;
         targetVertical = Mathf.Clamp(targetVertical, -maxLookAngle, maxLookAngle);
         verticalRotation = Mathf.Lerp(verticalRotation, targetVertical, speed * Time.deltaTime);
         cameraTransform.localRotation = Quaternion.Euler(verticalRotation, 0f, 0f);
 
-        // Arrived?
         bool yawClose   = Quaternion.Angle(transform.rotation, targetBodyRotation) < 1f;
         bool pitchClose = Mathf.Abs(verticalRotation - targetVertical) < 0.5f;
         return yawClose && pitchClose;
+    }
+
+    // ── Portal support ─────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Called by Portal after teleporting the player.
+    /// Re-applies the current vertical rotation to keep pitch continuous.
+    /// </summary>
+    public void OnPortalTeleport(Transform inPortal, Transform outPortal)
+    {
+        cameraTransform.localRotation = Quaternion.Euler(verticalRotation, 0f, 0f);
+    }
+
+    /// <summary>
+    /// Called by Portal after teleporting the player body transform.
+    /// Strips accidental pitch/roll, re-syncs camera pitch, resets vertical
+    /// velocity, and skips one movement frame to prevent the forward boost.
+    /// </summary>
+    public void OnPortalTeleport()
+    {
+        // Strip any accidental pitch/roll from the teleported body rotation.
+        float yaw = transform.rotation.eulerAngles.y;
+        transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+
+        // Re-sync camera pitch.
+        cameraTransform.localRotation = Quaternion.Euler(verticalRotation, 0f, 0f);
+
+        // Reset vertical velocity so accumulated gravity doesn't snap the player.
+        velocity.y = -2f;
     }
 }
