@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
@@ -14,6 +15,11 @@ public class Portal : MonoBehaviour
     [SerializeField] private float renderScale = 0.5f;
     [SerializeField] private bool renderPortalShadows = false;
     [SerializeField] private LayerMask portalCullingMask = ~0;
+
+    [Header("Door")]
+    [SerializeField] private GameObject door;
+    [SerializeField] private float doorOpenDuration = 0.8f;
+    [SerializeField] private float portalShrinkDuration = 0.6f;
 
     private Camera        _portalCam;
     private RenderTexture _rt;
@@ -96,6 +102,8 @@ public class Portal : MonoBehaviour
 
         if (_portalCollider != null)
         {
+            // Collider starts disabled; Physics.IgnoreCollision still works on
+            // disabled colliders, so we can pre-register the ignore safely.
             var cc  = _playerTransform.GetComponent<CharacterController>();
             var col = _playerTransform.GetComponent<Collider>();
             if (cc  != null) Physics.IgnoreCollision(_portalCollider, cc,  true);
@@ -125,7 +133,7 @@ public class Portal : MonoBehaviour
     // ── Teleport check — called by PortalManager.Update() ────────────────────
     internal void CheckTeleportThisFrame()
     {
-        if (linkedPortal == null) return;
+        if (!_canTeleport || linkedPortal == null) return;
 
         float signedDist = SignedDist(transform, _playerCam.transform.position);
         bool insideBounds = IsInsidePortalBounds(_playerCam.transform.position);
@@ -134,8 +142,6 @@ public class Portal : MonoBehaviour
         {
             _teleportCooldown -= Time.deltaTime;
 
-            // Re-arm teleport as soon as the player has clearly moved away from this
-            // portal, instead of waiting out the full timer every time.
             if (Mathf.Abs(signedDist) > CooldownClearDistance || !insideBounds)
                 _teleportCooldown = 0f;
 
@@ -244,10 +250,9 @@ public class Portal : MonoBehaviour
         var pc = playerController.Instance;
         if (pc == null) return;
 
-        Vector3    newPos = TransformPointThroughPortal(transform, linkedPortal.transform, _playerTransform.position);
+        Vector3 newPos = TransformPointThroughPortal(transform, linkedPortal.transform, _playerTransform.position);
         Quaternion newRot = TransformRotationThroughPortal(transform, linkedPortal.transform, _playerTransform.rotation);
 
-        // Keep this small. Large values cause black edges and overpush the player.
         const float exitOffset = -0.055f;
         newPos += linkedPortal.transform.forward * exitOffset;
 
@@ -260,10 +265,34 @@ public class Portal : MonoBehaviour
 
         linkedPortal.RenderPortalCamera();
 
-        _prevDistValid    = false;
-        _teleportCooldown = CooldownDuration;
-        linkedPortal._prevDistValid    = false;
-        linkedPortal._teleportCooldown = CooldownDuration;
+        DisablePortalPair();
+        RestoreExitPortalCollision();
+        StartClosureSequence();
+    }
+
+    // Waits until the player has fully left the exit portal's bounds (with leeway)
+    // before re-enabling its collider against the player.
+    private const float ExitClearLeeway = 0.25f; // extra world-units of clearance
+
+    private IEnumerator RestoreExitPortalCollisionWhenClear()
+    {
+        if (linkedPortal == null || linkedPortal._portalCollider == null || _playerTransform == null)
+            yield break;
+
+        // Poll every frame until the player is outside the exit portal bounds + leeway.
+        while (true)
+        {
+            Vector3 local = linkedPortal.transform.InverseTransformPoint(_playerTransform.position);
+            bool stillInside = Mathf.Abs(local.x) <= 1f + ExitClearLeeway
+                            && Mathf.Abs(local.y) <= 1f + ExitClearLeeway
+                            && Mathf.Abs(local.z) <= ExitClearLeeway;
+
+            if (!stillInside) break;
+
+            yield return null;
+        }
+
+        RestoreExitPortalCollision();
     }
 
     // ── Oblique near-clip ─────────────────────────────────────────────────────
@@ -350,5 +379,128 @@ public class Portal : MonoBehaviour
         extents.z = Mathf.Abs(axisX.z) + Mathf.Abs(axisY.z) + Mathf.Abs(axisZ.z);
 
         return new Bounds(center, extents * 2f);
+    }
+
+    private bool _canTeleport = true;
+    private bool _doorAnimationStarted;
+
+    private void DisablePortalPair()
+    {
+        _canTeleport = false;
+        _prevDistValid = false;
+        _teleportCooldown = 0f;
+
+        if (linkedPortal == null) return;
+
+        linkedPortal._canTeleport = false;
+        linkedPortal._prevDistValid = false;
+        linkedPortal._teleportCooldown = 0f;
+    }
+
+    private void StartClosureSequence()
+    {
+        if (_doorAnimationStarted || door == null || linkedPortal == null)
+            return;
+
+        _doorAnimationStarted = true;
+        StartCoroutine(AnimateClosureSequence());
+    }
+
+    private IEnumerator AnimateClosureSequence()
+    {
+        yield return AnimateDoorOpen();
+        yield return ShrinkExitPortalFromTopToBottom();
+    }
+
+    private IEnumerator AnimateDoorOpen()
+    {
+        Transform doorTransform = door.transform;
+        Vector3 euler = doorTransform.localEulerAngles;
+
+        float startY = euler.y;
+        float endY = startY - 160f;
+        float elapsed = 0f;
+
+        while (elapsed < doorOpenDuration)
+        {
+            elapsed += Time.deltaTime;
+
+            float t = Mathf.Clamp01(elapsed / doorOpenDuration);
+            float easedT = EaseInCubic(t);
+
+            euler.y = Mathf.LerpAngle(startY, endY, easedT);
+            doorTransform.localEulerAngles = euler;
+
+            yield return null;
+        }
+
+        euler.y = endY;
+        doorTransform.localEulerAngles = euler;
+    }
+
+    private IEnumerator ShrinkExitPortalFromTopToBottom()
+    {
+        Transform exitTransform = linkedPortal.transform;
+
+        Vector3 startScale = exitTransform.localScale;
+        Vector3 startPosition = exitTransform.localPosition;
+
+        float elapsed = 0f;
+
+        while (elapsed < portalShrinkDuration)
+        {
+            elapsed += Time.deltaTime;
+
+            float t = Mathf.Clamp01(elapsed / portalShrinkDuration);
+            float easedT = EaseOutCubic(t);
+            float newYScale = Mathf.Lerp(startScale.y, 0f, easedT);
+
+            Vector3 scale = startScale;
+            scale.y = newYScale;
+            exitTransform.localScale = scale;
+
+            Vector3 position = startPosition;
+            position.y = startPosition.y - ((startScale.y - newYScale) * 0.5f);
+            exitTransform.localPosition = position;
+
+            yield return null;
+        }
+
+        Vector3 finalScale = startScale;
+        finalScale.y = 0f;
+        exitTransform.localScale = finalScale;
+
+        Vector3 finalPosition = startPosition;
+        finalPosition.y = startPosition.y - (startScale.y * 0.5f);
+        exitTransform.localPosition = finalPosition;
+    }
+
+    private static float EaseInCubic(float t)
+    {
+        return t * t * t;
+    }
+
+    private static float EaseOutCubic(float t)
+    {
+        float x = 1f - t;
+        return 1f - (x * x * x);
+    }
+
+    private void RestoreExitPortalCollision()
+    {
+        if (linkedPortal == null || linkedPortal._portalCollider == null || _playerTransform == null)
+            return;
+
+        // Enable the collider now that the player has passed through.
+        linkedPortal._portalCollider.enabled = true;
+
+        var cc = _playerTransform.GetComponent<CharacterController>();
+        var col = _playerTransform.GetComponent<Collider>();
+
+        if (cc != null)
+            Physics.IgnoreCollision(linkedPortal._portalCollider, cc, false);
+
+        if (col != null)
+            Physics.IgnoreCollision(linkedPortal._portalCollider, col, false);
     }
 }
