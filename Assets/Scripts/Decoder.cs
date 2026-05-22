@@ -1,4 +1,5 @@
 using System.Collections;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class Decoder : MonoBehaviour
@@ -25,6 +26,9 @@ public class Decoder : MonoBehaviour
     [SerializeField] private Light decoderLight;
     [SerializeField] private float lightDimDuration = 0.8f;
     [SerializeField] private float lightRestoreDuration = 0.8f;
+
+    [Header("Jumpscare")]
+    [SerializeField] private GameObject jumpscareFace;
 
     private float _originalLightIntensity;
     private Coroutine _lightCoroutine;
@@ -149,6 +153,9 @@ public class Decoder : MonoBehaviour
                 StartCoroutine(ReturnFlap());
 
             Destroy(cassette);
+            //set jumpscare face active
+            if (jumpscareFace != null)
+                jumpscareFace.SetActive(true);
         }
 
         yield return new WaitForSeconds(1.2f);
