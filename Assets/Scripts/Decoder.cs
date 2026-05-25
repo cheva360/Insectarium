@@ -30,6 +30,9 @@ public class Decoder : MonoBehaviour
     [Header("Jumpscare")]
     [SerializeField] private GameObject jumpscareFace;
 
+    [Header("Cockroach")]
+    [SerializeField] private SmallCockroach smallCockroach;
+
     private float _originalLightIntensity;
     private Coroutine _lightCoroutine;
     private bool _sequenceStarted = false;
@@ -108,6 +111,7 @@ public class Decoder : MonoBehaviour
             float endZ   = startZ + 1.5f;
 
             Renderer cassetteRenderer = cassette.GetComponent<Renderer>();
+            bool cockroachTriggered = false;
 
             while (true)
             {
@@ -137,6 +141,14 @@ public class Decoder : MonoBehaviour
                     float zRot = Mathf.Lerp(0f, -90f, easedFlap);
                     Vector3 euler = casseteFlap.transform.localEulerAngles;
                     casseteFlap.transform.localEulerAngles = new Vector3(euler.x, euler.y, zRot);
+
+                    // Trigger cockroach once flap passes 75% of its rotation
+                    if (!cockroachTriggered && easedFlap >= 0.75f)
+                    {
+                        cockroachTriggered = true;
+                        if (smallCockroach != null)
+                            smallCockroach.hasStartedMoving = true;
+                    }
                 }
 
                 if (lp.z >= endZ)
