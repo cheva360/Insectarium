@@ -39,9 +39,9 @@ public class GameController : MonoBehaviour
 
     private void ApplyLoopState(LoopCount loop)
     {
-        loopOneObject?.SetActive(loop == LoopCount.One);
-        loopTwoObject?.SetActive(loop == LoopCount.Two);
-        loopThreeObject?.SetActive(loop == LoopCount.Three);
+        if (loopOneObject != null) loopOneObject.SetActive(loop == LoopCount.One);
+        if (loopTwoObject != null) loopTwoObject.SetActive(loop == LoopCount.Two);
+        if (loopThreeObject != null) loopThreeObject.SetActive(loop == LoopCount.Three);
     }
 
     void Awake()
