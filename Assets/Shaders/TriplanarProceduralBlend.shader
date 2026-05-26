@@ -1,0 +1,222 @@
+Shader "Custom/TriplanarProceduralBlend"
+{
+    Properties
+    {
+        _TextureA ("Texture A", 2D) = "white" {}
+        _TextureB ("Texture B", 2D) = "white" {}
+        _BaseColor ("Base Color", Color) = (1,1,1,1)
+
+        _TriplanarScale ("Triplanar Scale", Float) = 1.0
+        _TriplanarSharpness ("Triplanar Sharpness", Range(1, 8)) = 2.0
+
+        _TopNoiseScale ("Top Noise Scale", Float) = 1.0
+        _BottomNoiseScale ("Bottom Noise Scale", Float) = 1.0
+
+        _TopBlendHeight ("Top Weathering Height", Float) = 3.0
+        _TopBlendSoftness ("Top Weathering Softness", Float) = 0.5
+        _TopEdgeBreakup ("Top Edge Breakup", Float) = 0.35
+
+        _BottomBlendHeight ("Bottom Weathering Height", Float) = 0.0
+        _BottomBlendSoftness ("Bottom Weathering Softness", Float) = 0.5
+        _BottomEdgeBreakup ("Bottom Edge Breakup", Float) = 0.35
+
+        _StreakScale ("Top Streak Scale", Float) = 1.0
+        _StreakLength ("Top Streak Length", Float) = 2.0
+        _StreakBias ("Top Streak Bias", Range(0.2, 2.0)) = 0.65
+    }
+
+    SubShader
+    {
+        Tags
+        {
+            "RenderType"="Opaque"
+            "RenderPipeline"="UniversalPipeline"
+            "Queue"="Geometry"
+        }
+
+        Pass
+        {
+            Name "ForwardLit"
+            Tags { "LightMode"="UniversalForward" }
+            Cull Back
+            ZWrite On
+            ZTest LEqual
+
+            HLSLPROGRAM
+            #pragma target 3.0
+            #pragma vertex vert
+            #pragma fragment frag
+
+            #pragma multi_compile_fog
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
+            #pragma multi_compile _ _ADDITIONAL_LIGHTS
+            #pragma multi_compile _ _ADDITIONAL_LIGHT_SHADOWS
+            #pragma multi_compile _ _SHADOWS_SOFT
+
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+
+            TEXTURE2D(_TextureA);
+            SAMPLER(sampler_TextureA);
+
+            TEXTURE2D(_TextureB);
+            SAMPLER(sampler_TextureB);
+
+            CBUFFER_START(UnityPerMaterial)
+                float4 _BaseColor;
+                float _TriplanarScale;
+                float _TriplanarSharpness;
+
+                float _TopNoiseScale;
+                float _BottomNoiseScale;
+
+                float _TopBlendHeight;
+                float _TopBlendSoftness;
+                float _TopEdgeBreakup;
+
+                float _BottomBlendHeight;
+                float _BottomBlendSoftness;
+                float _BottomEdgeBreakup;
+
+                float _StreakScale;
+                float _StreakLength;
+                float _StreakBias;
+            CBUFFER_END
+
+            struct Attributes
+            {
+                float4 positionOS : POSITION;
+                float3 normalOS : NORMAL;
+            };
+
+            struct Varyings
+            {
+                float4 positionHCS : SV_POSITION;
+                float3 positionWS : TEXCOORD0;
+                float3 normalWS : TEXCOORD1;
+                float4 shadowCoord : TEXCOORD2;
+                half fogFactor : TEXCOORD3;
+            };
+
+            float Hash(float2 p)
+            {
+                return frac(sin(dot(p, float2(127.1, 311.7))) * 43758.5453);
+            }
+
+            float ValueNoise(float2 p)
+            {
+                float2 i = floor(p);
+                float2 f = frac(p);
+                float2 u = f * f * (3.0 - 2.0 * f);
+
+                return lerp(
+                    lerp(Hash(i + float2(0, 0)), Hash(i + float2(1, 0)), u.x),
+                    lerp(Hash(i + float2(0, 1)), Hash(i + float2(1, 1)), u.x),
+                    u.y
+                );
+            }
+
+            float4 SampleTriplanar(TEXTURE2D_PARAM(tex, samp), float3 absWorldPos, float3 worldNormal, float scale, float sharpness)
+            {
+                float3 n = abs(normalize(worldNormal));
+                float3 weights = pow(n, sharpness);
+                weights /= max(weights.x + weights.y + weights.z, 0.0001);
+
+                float2 uvX = absWorldPos.zy * scale;
+                float2 uvY = absWorldPos.xz * scale;
+                float2 uvZ = absWorldPos.xy * scale;
+
+                float4 xSample = SAMPLE_TEXTURE2D(tex, samp, uvX);
+                float4 ySample = SAMPLE_TEXTURE2D(tex, samp, uvY);
+                float4 zSample = SAMPLE_TEXTURE2D(tex, samp, uvZ);
+
+                return xSample * weights.x + ySample * weights.y + zSample * weights.z;
+            }
+
+            Varyings vert(Attributes IN)
+            {
+                Varyings OUT;
+
+                VertexPositionInputs pos = GetVertexPositionInputs(IN.positionOS.xyz);
+                VertexNormalInputs norm = GetVertexNormalInputs(IN.normalOS);
+
+                OUT.positionHCS = pos.positionCS;
+                OUT.positionWS = pos.positionWS;
+                OUT.normalWS = normalize(norm.normalWS);
+                OUT.shadowCoord = GetShadowCoord(pos);
+                OUT.fogFactor = ComputeFogFactor(pos.positionCS.z);
+
+                return OUT;
+            }
+
+            half4 frag(Varyings IN) : SV_Target
+            {
+                float3 worldPos = IN.positionWS;
+                float3 absWorldPos = abs(worldPos);
+                float3 worldNormal = normalize(IN.normalWS);
+
+                float4 baseA = SampleTriplanar(
+                    TEXTURE2D_ARGS(_TextureA, sampler_TextureA),
+                    absWorldPos,
+                    worldNormal,
+                    _TriplanarScale,
+                    _TriplanarSharpness);
+
+                float4 baseB = SampleTriplanar(
+                    TEXTURE2D_ARGS(_TextureB, sampler_TextureB),
+                    absWorldPos,
+                    worldNormal,
+                    _TriplanarScale,
+                    _TriplanarSharpness);
+
+                float2 topEdgePos = worldPos.xz * _TopNoiseScale;
+                float2 bottomEdgePos = worldPos.xz * _BottomNoiseScale;
+
+                float topNoise = (ValueNoise(topEdgePos + float2(11.3, 7.9)) - 0.5) * _TopEdgeBreakup;
+                float bottomNoise = (ValueNoise(bottomEdgePos + float2(27.4, 63.1)) - 0.5) * _BottomEdgeBreakup;
+
+                float streakSeed = ValueNoise(worldPos.xz * _StreakScale + float2(73.1, 19.7));
+                streakSeed = pow(saturate(streakSeed), _StreakBias);
+                float streakDrop = streakSeed * _StreakLength;
+
+                float topThreshold = _TopBlendHeight - streakDrop + topNoise;
+                float topMask = smoothstep(
+                    topThreshold - max(_TopBlendSoftness, 0.0001),
+                    topThreshold + max(_TopBlendSoftness, 0.0001),
+                    worldPos.y);
+
+                float bottomThreshold = _BottomBlendHeight + bottomNoise;
+                float bottomMask = 1.0 - smoothstep(
+                    bottomThreshold - max(_BottomBlendSoftness, 0.0001),
+                    bottomThreshold + max(_BottomBlendSoftness, 0.0001),
+                    worldPos.y);
+
+                float weatheringMask = saturate(max(topMask, bottomMask));
+
+                half3 albedo = lerp(baseA.rgb, baseB.rgb, weatheringMask) * _BaseColor.rgb;
+
+                half3 ambient = SampleSH(worldNormal);
+
+                Light mainLight = GetMainLight(IN.shadowCoord);
+                half mainNdotL = saturate(dot(worldNormal, mainLight.direction));
+                half3 lighting = ambient + (mainLight.color * mainNdotL * mainLight.distanceAttenuation * mainLight.shadowAttenuation);
+
+                #if defined(_ADDITIONAL_LIGHTS)
+                uint lightCount = GetAdditionalLightsCount();
+                for (uint i = 0u; i < lightCount; ++i)
+                {
+                    Light light = GetAdditionalLight(i, worldPos);
+                    half ndotl = saturate(dot(worldNormal, light.direction));
+                    lighting += light.color * ndotl * light.distanceAttenuation * light.shadowAttenuation;
+                }
+                #endif
+
+                half3 finalColor = albedo * lighting;
+                finalColor = MixFog(finalColor, IN.fogFactor);
+
+                return half4(finalColor, 1.0);
+            }
+            ENDHLSL
+        }
+    }
+}
