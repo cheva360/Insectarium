@@ -144,16 +144,11 @@ public class playerController : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Escape))
-        {
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
-        }
-
+        //esc to unlock cursor for debuggging
         if (Input.GetMouseButtonDown(0) && Application.isFocused)
         {
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
+            //Cursor.lockState = CursorLockMode.Locked;
+            //Cursor.visible = false;
         }
 
         // Cache move input once per frame — reused by HandleMovement, HandleRadarAnimation, IsWalking

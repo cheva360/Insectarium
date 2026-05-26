@@ -19,6 +19,8 @@ public class Decoder : MonoBehaviour
     [Header("Cassette Insert Settings")]
     [Tooltip("How fast the camera lerps to the cassette look target.")]
     [SerializeField] private float cameraLerpSpeed = 3f;
+    [Tooltip("How fast the camera lerps back after the sequence. Should be faster than cameraLerpSpeed.")]
+    [SerializeField] private float cameraReturnLerpSpeed = 6f;
     [Tooltip("How sensitive the mouse is when sliding the cassette (units per mouse delta).")]
     [SerializeField] private float cassetteMouseSensitivity = 0.015f;
 
