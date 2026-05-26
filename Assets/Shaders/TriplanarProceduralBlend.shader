@@ -4,10 +4,15 @@ Shader "Custom/TriplanarProceduralBlend"
     {
         _TextureA ("Texture A", 2D) = "white" {}
         _TextureB ("Texture B", 2D) = "white" {}
+        [Toggle] _UseFoliage ("Use Foliage", Float) = 0
+        _FoliageTexture ("Foliage Texture", 2D) = "white" {}
+
         _BaseColor ("Base Color", Color) = (1,1,1,1)
+        _FoliageColor ("Foliage Color", Color) = (1,1,1,1)
 
         _TriplanarScale ("Triplanar Scale", Float) = 1.0
         _TriplanarSharpness ("Triplanar Sharpness", Range(1, 8)) = 2.0
+        _FoliageTriplanarScale ("Foliage Triplanar Scale", Float) = 1.0
 
         _TopNoiseScale ("Top Noise Scale", Float) = 1.0
         _BottomNoiseScale ("Bottom Noise Scale", Float) = 1.0
@@ -23,6 +28,12 @@ Shader "Custom/TriplanarProceduralBlend"
         _StreakScale ("Top Streak Scale", Float) = 1.0
         _StreakLength ("Top Streak Length", Float) = 2.0
         _StreakBias ("Top Streak Bias", Range(0.2, 2.0)) = 0.65
+
+        _FoliageSlopeInfluence ("Foliage Slope Influence", Range(0,1)) = 1.0
+        _FoliageSlopeMin ("Foliage Slope Min", Range(0,1)) = 0.2
+        _FoliageSlopePower ("Foliage Slope Power", Range(0.1, 8.0)) = 2.0
+        _FoliageNoiseScale ("Foliage Noise Scale", Float) = 2.0
+        _FoliageNoiseStrength ("Foliage Noise Strength", Range(0,1)) = 0.25
     }
 
     SubShader
@@ -62,10 +73,17 @@ Shader "Custom/TriplanarProceduralBlend"
             TEXTURE2D(_TextureB);
             SAMPLER(sampler_TextureB);
 
+            TEXTURE2D(_FoliageTexture);
+            SAMPLER(sampler_FoliageTexture);
+
             CBUFFER_START(UnityPerMaterial)
                 float4 _BaseColor;
+                float4 _FoliageColor;
+
+                float _UseFoliage;
                 float _TriplanarScale;
                 float _TriplanarSharpness;
+                float _FoliageTriplanarScale;
 
                 float _TopNoiseScale;
                 float _BottomNoiseScale;
@@ -81,12 +99,19 @@ Shader "Custom/TriplanarProceduralBlend"
                 float _StreakScale;
                 float _StreakLength;
                 float _StreakBias;
+
+                float _FoliageSlopeInfluence;
+                float _FoliageSlopeMin;
+                float _FoliageSlopePower;
+                float _FoliageNoiseScale;
+                float _FoliageNoiseStrength;
             CBUFFER_END
 
             struct Attributes
             {
                 float4 positionOS : POSITION;
                 float3 normalOS : NORMAL;
+                float4 color : COLOR;
             };
 
             struct Varyings
@@ -96,6 +121,7 @@ Shader "Custom/TriplanarProceduralBlend"
                 float3 normalWS : TEXCOORD1;
                 float4 shadowCoord : TEXCOORD2;
                 half fogFactor : TEXCOORD3;
+                float4 color : TEXCOORD4;
             };
 
             float Hash(float2 p)
@@ -145,6 +171,7 @@ Shader "Custom/TriplanarProceduralBlend"
                 OUT.normalWS = normalize(norm.normalWS);
                 OUT.shadowCoord = GetShadowCoord(pos);
                 OUT.fogFactor = ComputeFogFactor(pos.positionCS.z);
+                OUT.color = IN.color;
 
                 return OUT;
             }
@@ -192,8 +219,35 @@ Shader "Custom/TriplanarProceduralBlend"
                     worldPos.y);
 
                 float weatheringMask = saturate(max(topMask, bottomMask));
+                half3 baseAlbedo = lerp(baseA.rgb, baseB.rgb, weatheringMask) * _BaseColor.rgb;
 
-                half3 albedo = lerp(baseA.rgb, baseB.rgb, weatheringMask) * _BaseColor.rgb;
+                half3 albedo = baseAlbedo;
+
+                if (_UseFoliage > 0.5)
+                {
+                    float4 foliageSample = SampleTriplanar(
+                        TEXTURE2D_ARGS(_FoliageTexture, sampler_FoliageTexture),
+                        absWorldPos,
+                        worldNormal,
+                        _FoliageTriplanarScale,
+                        _TriplanarSharpness);
+
+                    float foliagePaint = saturate(IN.color.r);
+
+                    float upMask = smoothstep(_FoliageSlopeMin, 1.0, saturate(worldNormal.y));
+                    upMask = pow(upMask, _FoliageSlopePower);
+
+                    float foliageSlopeMask = lerp(1.0, upMask, _FoliageSlopeInfluence);
+
+                    float foliageNoise = (ValueNoise(worldPos.xz * _FoliageNoiseScale + float2(91.7, 24.3)) - 0.5) * 2.0;
+                    float foliageBreakup = saturate(1.0 + foliageNoise * _FoliageNoiseStrength);
+
+                    float foliageAlpha = saturate(foliageSample.a * _FoliageColor.a);
+                    float foliageMask = saturate(foliagePaint * foliageSlopeMask * foliageBreakup * foliageAlpha);
+
+                    half3 foliageAlbedo = foliageSample.rgb * _FoliageColor.rgb;
+                    albedo = lerp(baseAlbedo, foliageAlbedo, foliageMask);
+                }
 
                 half3 ambient = SampleSH(worldNormal);
 
