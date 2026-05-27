@@ -53,8 +53,20 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _FoliageMaskX:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _FoliageMaskY:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _FoliageMaskZ:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _FoliageTexture:
-        m_Texture: {fileID: 2800000, guid: 8100b5b0d847b0041820fb5943f77dc8, type: 3}
+        m_Texture: {fileID: 2800000, guid: 12ace30273ff2254d8046558dc1b18a2, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
@@ -125,12 +137,15 @@ Material:
     - _DstBlend: 0
     - _DstBlendAlpha: 0
     - _EnvironmentReflections: 1
-    - _FoliageNoiseScale: 2
-    - _FoliageNoiseStrength: 0
+    - _FoliageMaskProjection: 2
+    - _FoliageNoiseScale: 1
+    - _FoliageNoiseStrength: 0.08
     - _FoliageSlopeInfluence: 0
-    - _FoliageSlopeMin: 0.2
-    - _FoliageSlopePower: 5.6
-    - _FoliageTriplanarScale: 0.17
+    - _FoliageSlopeMin: 0
+    - _FoliageSlopePower: 4.1
+    - _FoliageSoftness: 1
+    - _FoliageTransparency: 0.89
+    - _FoliageTriplanarScale: 0.4
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
@@ -166,6 +181,8 @@ Material:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _FoliageColor: {r: 1, g: 1, b: 1, a: 1}
+    - _FoliageMaskBoundsMin: {r: -12, g: 0.0000076293945, b: -33, a: 0}
+    - _FoliageMaskBoundsSize: {r: 26, g: 9, b: 34, a: 0}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

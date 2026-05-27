@@ -6,6 +6,9 @@ Shader "Custom/TriplanarProceduralBlend"
         _TextureB ("Texture B", 2D) = "white" {}
         [Toggle] _UseFoliage ("Use Foliage", Float) = 0
         _FoliageTexture ("Foliage Texture", 2D) = "white" {}
+        _FoliageMaskX ("Foliage Mask X", 2D) = "black" {}
+        _FoliageMaskY ("Foliage Mask Y", 2D) = "black" {}
+        _FoliageMaskZ ("Foliage Mask Z", 2D) = "black" {}
 
         _BaseColor ("Base Color", Color) = (1,1,1,1)
         _FoliageColor ("Foliage Color", Color) = (1,1,1,1)
@@ -34,6 +37,11 @@ Shader "Custom/TriplanarProceduralBlend"
         _FoliageSlopePower ("Foliage Slope Power", Range(0.1, 8.0)) = 2.0
         _FoliageNoiseScale ("Foliage Noise Scale", Float) = 2.0
         _FoliageNoiseStrength ("Foliage Noise Strength", Range(0,1)) = 0.25
+        _FoliageSoftness ("Foliage Softness", Range(0.01, 1.0)) = 0.2
+        _FoliageTransparency ("Foliage Transparency", Range(0,1)) = 1.0
+
+        _FoliageMaskBoundsMin ("Foliage Mask Bounds Min", Vector) = (0,0,0,0)
+        _FoliageMaskBoundsSize ("Foliage Mask Bounds Size", Vector) = (1,1,1,0)
     }
 
     SubShader
@@ -76,6 +84,15 @@ Shader "Custom/TriplanarProceduralBlend"
             TEXTURE2D(_FoliageTexture);
             SAMPLER(sampler_FoliageTexture);
 
+            TEXTURE2D(_FoliageMaskX);
+            SAMPLER(sampler_FoliageMaskX);
+
+            TEXTURE2D(_FoliageMaskY);
+            SAMPLER(sampler_FoliageMaskY);
+
+            TEXTURE2D(_FoliageMaskZ);
+            SAMPLER(sampler_FoliageMaskZ);
+
             CBUFFER_START(UnityPerMaterial)
                 float4 _BaseColor;
                 float4 _FoliageColor;
@@ -105,13 +122,17 @@ Shader "Custom/TriplanarProceduralBlend"
                 float _FoliageSlopePower;
                 float _FoliageNoiseScale;
                 float _FoliageNoiseStrength;
+                float _FoliageSoftness;
+                float _FoliageTransparency;
+
+                float4 _FoliageMaskBoundsMin;
+                float4 _FoliageMaskBoundsSize;
             CBUFFER_END
 
             struct Attributes
             {
                 float4 positionOS : POSITION;
                 float3 normalOS : NORMAL;
-                float4 color : COLOR;
             };
 
             struct Varyings
@@ -121,7 +142,8 @@ Shader "Custom/TriplanarProceduralBlend"
                 float3 normalWS : TEXCOORD1;
                 float4 shadowCoord : TEXCOORD2;
                 half fogFactor : TEXCOORD3;
-                float4 color : TEXCOORD4;
+                float3 positionOS : TEXCOORD4;
+                float3 normalOS : TEXCOORD5;
             };
 
             float Hash(float2 p)
@@ -142,11 +164,16 @@ Shader "Custom/TriplanarProceduralBlend"
                 );
             }
 
+            float3 GetTriplanarWeights(float3 normalValue, float sharpness)
+            {
+                float3 n = abs(normalize(normalValue));
+                float3 weights = pow(max(n, 0.0001), sharpness);
+                return weights / max(weights.x + weights.y + weights.z, 0.0001);
+            }
+
             float4 SampleTriplanar(TEXTURE2D_PARAM(tex, samp), float3 absWorldPos, float3 worldNormal, float scale, float sharpness)
             {
-                float3 n = abs(normalize(worldNormal));
-                float3 weights = pow(n, sharpness);
-                weights /= max(weights.x + weights.y + weights.z, 0.0001);
+                float3 weights = GetTriplanarWeights(worldNormal, sharpness);
 
                 float2 uvX = absWorldPos.zy * scale;
                 float2 uvY = absWorldPos.xz * scale;
@@ -157,6 +184,27 @@ Shader "Custom/TriplanarProceduralBlend"
                 float4 zSample = SAMPLE_TEXTURE2D(tex, samp, uvZ);
 
                 return xSample * weights.x + ySample * weights.y + zSample * weights.z;
+            }
+
+            float SampleTriplanarMask(float3 positionOS, float3 normalOS)
+            {
+                float3 boundsMin = _FoliageMaskBoundsMin.xyz;
+                float3 boundsSize = max(_FoliageMaskBoundsSize.xyz, float3(0.0001, 0.0001, 0.0001));
+                float3 weights = GetTriplanarWeights(normalOS, _TriplanarSharpness);
+
+                float2 uvX = saturate((positionOS.zy - boundsMin.zy) / boundsSize.zy);
+                float2 uvY = saturate((positionOS.xz - boundsMin.xz) / boundsSize.xz);
+                float2 uvZ = saturate((positionOS.xy - boundsMin.xy) / boundsSize.xy);
+
+                if (normalOS.x < 0.0) uvX.x = 1.0 - uvX.x;
+                if (normalOS.y < 0.0) uvY.x = 1.0 - uvY.x;
+                if (normalOS.z < 0.0) uvZ.x = 1.0 - uvZ.x;
+
+                float maskX = SAMPLE_TEXTURE2D(_FoliageMaskX, sampler_FoliageMaskX, uvX).r;
+                float maskY = SAMPLE_TEXTURE2D(_FoliageMaskY, sampler_FoliageMaskY, uvY).r;
+                float maskZ = SAMPLE_TEXTURE2D(_FoliageMaskZ, sampler_FoliageMaskZ, uvZ).r;
+
+                return maskX * weights.x + maskY * weights.y + maskZ * weights.z;
             }
 
             Varyings vert(Attributes IN)
@@ -171,7 +219,8 @@ Shader "Custom/TriplanarProceduralBlend"
                 OUT.normalWS = normalize(norm.normalWS);
                 OUT.shadowCoord = GetShadowCoord(pos);
                 OUT.fogFactor = ComputeFogFactor(pos.positionCS.z);
-                OUT.color = IN.color;
+                OUT.positionOS = IN.positionOS.xyz;
+                OUT.normalOS = normalize(IN.normalOS);
 
                 return OUT;
             }
@@ -181,6 +230,7 @@ Shader "Custom/TriplanarProceduralBlend"
                 float3 worldPos = IN.positionWS;
                 float3 absWorldPos = abs(worldPos);
                 float3 worldNormal = normalize(IN.normalWS);
+                float3 objectNormal = normalize(IN.normalOS);
 
                 float4 baseA = SampleTriplanar(
                     TEXTURE2D_ARGS(_TextureA, sampler_TextureA),
@@ -232,7 +282,7 @@ Shader "Custom/TriplanarProceduralBlend"
                         _FoliageTriplanarScale,
                         _TriplanarSharpness);
 
-                    float foliagePaint = saturate(IN.color.r);
+                    float foliagePaint = SampleTriplanarMask(IN.positionOS, objectNormal);
 
                     float upMask = smoothstep(_FoliageSlopeMin, 1.0, saturate(worldNormal.y));
                     upMask = pow(upMask, _FoliageSlopePower);
@@ -243,7 +293,10 @@ Shader "Custom/TriplanarProceduralBlend"
                     float foliageBreakup = saturate(1.0 + foliageNoise * _FoliageNoiseStrength);
 
                     float foliageAlpha = saturate(foliageSample.a * _FoliageColor.a);
-                    float foliageMask = saturate(foliagePaint * foliageSlopeMask * foliageBreakup * foliageAlpha);
+                    float foliageSoftStep = smoothstep(0.0, max(_FoliageSoftness, 0.0001), foliagePaint);
+                    float foliageSoftPaint = lerp(foliagePaint, foliageSoftStep, saturate(_FoliageSoftness * 0.5));
+                    float foliageRawMask = saturate(foliageSoftPaint * foliageSlopeMask * foliageBreakup);
+                    float foliageMask = saturate(foliageRawMask * foliageAlpha * _FoliageTransparency);
 
                     half3 foliageAlbedo = foliageSample.rgb * _FoliageColor.rgb;
                     albedo = lerp(baseAlbedo, foliageAlbedo, foliageMask);
