@@ -4,6 +4,9 @@ using UnityEngine.AI;
 public class SmallCockroach : MonoBehaviour
 {
     [SerializeField] private Transform[] goals;
+    [SerializeField] private bool useRandomMovement = false;
+    [SerializeField] private float randomPointSampleRadius = 2f;
+    [SerializeField] private int randomPointAttempts = 10;
     [SerializeField] private float rotationSpeed = 720f;
     [SerializeField] private float minIdleTime = 1f;
     [SerializeField] private float maxIdleTime = 4f;
@@ -18,91 +21,90 @@ public class SmallCockroach : MonoBehaviour
     private float idleTimer = 0f;
     private bool isIdling = false;
     private bool isTraversingLink = false;
+    private bool movementFinished = false;
+    private bool wasStartedMoving = false;
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         agent = GetComponent<NavMeshAgent>();
         animator = GetComponent<Animator>();
 
-        // Disable built-in agent rotation so we control it manually
         agent.updateRotation = false;
-        // Manually traverse off-mesh links to keep consistent speed
         agent.autoTraverseOffMeshLink = false;
 
         instanceGoals = goals != null ? (Transform[])goals.Clone() : new Transform[0];
-
-        if (instanceGoals.Length == 0) return;
+        wasStartedMoving = hasStartedMoving;
 
         if (hasStartedMoving)
-            agent.destination = instanceGoals[currentGoalIndex].position;
+        {
+            currentGoalIndex = 0;
+            movementFinished = !TrySetNextDestination(true);
+        }
     }
 
-    // Update is called once per frame
     void Update()
     {
-        if (!hasStartedMoving) return;
+        if (agent == null) return;
 
-        //if has navmesh
-        if (agent != null)
+        if (hasStartedMoving != wasStartedMoving)
         {
-            // Set destination on the first frame hasStartedMoving becomes true
-            if (!agent.hasPath && !agent.pathPending && !isTraversingLink && instanceGoals != null && instanceGoals.Length > 0)
-                agent.destination = instanceGoals[currentGoalIndex].position;
+            wasStartedMoving = hasStartedMoving;
+            isIdling = false;
+            movementFinished = false;
 
-            // Manually traverse off-mesh links at normal agent speed
-            if (agent.isOnOffMeshLink && !isTraversingLink)
+            if (!hasStartedMoving)
             {
-                isTraversingLink = true;
-                StartCoroutine(TraverseLink());
+                agent.ResetPath();
+
+                if (animator != null)
+                    animator.SetBool("isMoving", false);
+
                 return;
             }
 
-            if (isTraversingLink) return;
+            currentGoalIndex = 0;
+            movementFinished = !TrySetNextDestination(true);
+        }
 
-            bool isMoving = !agent.pathPending && agent.remainingDistance > agent.stoppingDistance;
+        if (!hasStartedMoving || movementFinished) return;
 
-            if (animator != null)
-            {
-                animator.SetBool("isMoving", isMoving);
-            }
+        if (agent.isOnOffMeshLink && !isTraversingLink)
+        {
+            isTraversingLink = true;
+            StartCoroutine(TraverseLink());
+            return;
+        }
 
-            HandleRotation();
+        if (isTraversingLink) return;
 
-            if (instanceGoals == null || instanceGoals.Length == 0) return;
+        bool isMoving = !agent.pathPending && agent.remainingDistance > agent.stoppingDistance;
 
-            if (currentGoalIndex >= instanceGoals.Length - 1) return;
+        if (animator != null)
+            animator.SetBool("isMoving", isMoving);
 
-            if (!isMoving)
-            {
-                if (!stopOnGoal)
-                {
-                    // Skip wait time, immediately move to next goal
-                    currentGoalIndex++;
-                    agent.destination = instanceGoals[currentGoalIndex].position;
-                }
-                else
-                {
-                    if (!isIdling)
-                    {
-                        // Just arrived, start idle timer
-                        isIdling = true;
-                        idleTimer = Random.Range(minIdleTime, maxIdleTime);
-                    }
-                    else
-                    {
-                        idleTimer -= Time.deltaTime;
+        HandleRotation();
 
-                        if (idleTimer <= 0f)
-                        {
-                            // Done idling, move to next goal
-                            isIdling = false;
-                            currentGoalIndex++;
-                            agent.destination = instanceGoals[currentGoalIndex].position;
-                        }
-                    }
-                }
-            }
+        if (isMoving || agent.pathPending) return;
+
+        if (!stopOnGoal)
+        {
+            movementFinished = !TrySetNextDestination();
+            return;
+        }
+
+        if (!isIdling)
+        {
+            isIdling = true;
+            idleTimer = Random.Range(minIdleTime, maxIdleTime);
+            return;
+        }
+
+        idleTimer -= Time.deltaTime;
+
+        if (idleTimer <= 0f)
+        {
+            isIdling = false;
+            movementFinished = !TrySetNextDestination();
         }
     }
 
@@ -110,10 +112,8 @@ public class SmallCockroach : MonoBehaviour
     {
         OffMeshLinkData linkData = agent.currentOffMeshLinkData;
 
-        // Agent already stopped at link start (autoTraverseOffMeshLink = false),
-        // so use the link's geometry for an accurate direction
         Vector3 startPos = transform.position;
-        Vector3 endPos   = linkData.endPos + Vector3.up * agent.baseOffset;
+        Vector3 endPos = linkData.endPos + Vector3.up * agent.baseOffset;
 
         Vector3 linkDir = (linkData.endPos + Vector3.up * agent.baseOffset)
                         - (linkData.startPos + Vector3.up * agent.baseOffset);
@@ -152,5 +152,79 @@ public class SmallCockroach : MonoBehaviour
         Vector3 direction = agent.velocity.normalized;
         Quaternion targetRotation = Quaternion.LookRotation(direction);
         transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+    }
+
+    private bool TrySetNextDestination(bool isInitialDestination = false)
+    {
+        if (useRandomMovement)
+        {
+            if (TryGetRandomNavMeshDestination(out Vector3 destination))
+            {
+                agent.destination = destination;
+                return true;
+            }
+
+            return false;
+        }
+
+        if (instanceGoals == null || instanceGoals.Length == 0)
+            return false;
+
+        if (!isInitialDestination)
+        {
+            if (currentGoalIndex >= instanceGoals.Length - 1)
+                return false;
+
+            currentGoalIndex++;
+        }
+
+        agent.destination = instanceGoals[currentGoalIndex].position;
+        return true;
+    }
+
+    private bool TryGetRandomNavMeshDestination(out Vector3 destination)
+    {
+        NavMeshTriangulation triangulation = NavMesh.CalculateTriangulation();
+
+        if (triangulation.vertices == null || triangulation.vertices.Length == 0 ||
+            triangulation.indices == null || triangulation.indices.Length < 3)
+        {
+            destination = transform.position;
+            return false;
+        }
+
+        for (int attempt = 0; attempt < randomPointAttempts; attempt++)
+        {
+            int triangleIndex = Random.Range(0, triangulation.indices.Length / 3) * 3;
+
+            Vector3 a = triangulation.vertices[triangulation.indices[triangleIndex]];
+            Vector3 b = triangulation.vertices[triangulation.indices[triangleIndex + 1]];
+            Vector3 c = triangulation.vertices[triangulation.indices[triangleIndex + 2]];
+
+            Vector3 point = GetRandomPointInTriangle(a, b, c);
+
+            if (NavMesh.SamplePosition(point, out NavMeshHit hit, randomPointSampleRadius, NavMesh.AllAreas))
+            {
+                destination = hit.position;
+                return true;
+            }
+        }
+
+        destination = transform.position;
+        return false;
+    }
+
+    private Vector3 GetRandomPointInTriangle(Vector3 a, Vector3 b, Vector3 c)
+    {
+        float r1 = Random.value;
+        float r2 = Random.value;
+
+        if (r1 + r2 > 1f)
+        {
+            r1 = 1f - r1;
+            r2 = 1f - r2;
+        }
+
+        return a + r1 * (b - a) + r2 * (c - a);
     }
 }

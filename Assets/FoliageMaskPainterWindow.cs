@@ -59,6 +59,8 @@ public sealed class FoliageMaskPainterWindow : EditorWindow
         R4096 = 4096
     }
 
+    private bool toolEnabled = true;
+
     private Renderer targetRenderer;
     private int materialIndex;
     private BrushMode brushMode = BrushMode.Add;
@@ -91,6 +93,7 @@ public sealed class FoliageMaskPainterWindow : EditorWindow
 
     private void OnEnable()
     {
+        SceneView.duringSceneGui -= OnSceneGUI;
         SceneView.duringSceneGui += OnSceneGUI;
         TryAssignFromSelection();
     }
@@ -117,159 +120,181 @@ public sealed class FoliageMaskPainterWindow : EditorWindow
 
     private void OnGUI()
     {
-        scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition);
-
-        EditorGUILayout.LabelField("Target", EditorStyles.boldLabel);
-
-        targetRenderer = (Renderer)EditorGUILayout.ObjectField("Renderer", targetRenderer, typeof(Renderer), true);
-
-        if (GUILayout.Button("Use Selected Object"))
+        using (EditorGUILayout.ScrollViewScope scrollView = new EditorGUILayout.ScrollViewScope(scrollPosition))
         {
-            TryAssignFromSelection();
-        }
+            scrollPosition = scrollView.scrollPosition;
 
-        if (targetRenderer == null)
-        {
-            EditorGUILayout.HelpBox("Select a GameObject with a Renderer.", MessageType.Info);
-            return;
-        }
+            toolEnabled = EditorGUILayout.Toggle("Tool Enabled", toolEnabled);
 
-        Material[] materials = targetRenderer.sharedMaterials;
-        if (materials == null || materials.Length == 0)
-        {
-            EditorGUILayout.HelpBox("The selected renderer has no materials.", MessageType.Warning);
-            return;
-        }
+            EditorGUILayout.LabelField("Target", EditorStyles.boldLabel);
 
-        materialIndex = Mathf.Clamp(materialIndex, 0, materials.Length - 1);
-        materialIndex = EditorGUILayout.Popup("Material", materialIndex, GetMaterialNames(materials));
+            targetRenderer = (Renderer)EditorGUILayout.ObjectField("Renderer", targetRenderer, typeof(Renderer), true);
 
-        Material targetMaterial = GetTargetMaterial();
-        if (targetMaterial == null)
-        {
-            EditorGUILayout.HelpBox("No valid material selected.", MessageType.Warning);
-            return;
-        }
+            if (GUILayout.Button("Use Selected Object"))
+            {
+                TryAssignFromSelection();
+            }
 
-        if (!SupportsTriplanarMasks(targetMaterial))
-        {
-            EditorGUILayout.HelpBox("The selected material does not support triplanar foliage masks.", MessageType.Error);
-            return;
-        }
+            if (!toolEnabled)
+            {
+                EditorGUILayout.HelpBox("Enable the tool to use Scene view painting.", MessageType.Info);
+                return;
+            }
 
-        RefreshMaskReferences(targetMaterial);
+            if (targetRenderer == null)
+            {
+                EditorGUILayout.HelpBox("Select a GameObject with a Renderer.", MessageType.Info);
+                return;
+            }
 
-        EditorGUILayout.Space();
-        EditorGUILayout.LabelField("Mask Assets", EditorStyles.boldLabel);
+            Material[] materials = targetRenderer.sharedMaterials;
+            if (materials == null || materials.Length == 0)
+            {
+                EditorGUILayout.HelpBox("The selected renderer has no materials.", MessageType.Warning);
+                return;
+            }
 
-        maskResolution = (MaskResolution)EditorGUILayout.EnumPopup("Mask Resolution", maskResolution);
+            materialIndex = Mathf.Clamp(materialIndex, 0, materials.Length - 1);
+            materialIndex = EditorGUILayout.Popup("Material", materialIndex, GetMaterialNames(materials));
 
-        if (GUILayout.Button("Prepare Unique Material + Masks For This Renderer"))
-        {
-            SaveWorkingTexturesIfNeeded();
-            PrepareUniqueMaterialAndMasks();
-            targetMaterial = GetTargetMaterial();
+            Material targetMaterial = GetTargetMaterial();
+            if (targetMaterial == null)
+            {
+                EditorGUILayout.HelpBox("No valid material selected.", MessageType.Warning);
+                return;
+            }
+
+            if (!SupportsTriplanarMasks(targetMaterial))
+            {
+                EditorGUILayout.HelpBox("The selected material does not support triplanar foliage masks.", MessageType.Error);
+                return;
+            }
+
             RefreshMaskReferences(targetMaterial);
-        }
 
-        if (!HasAllMasks())
-        {
-            EditorGUILayout.HelpBox("One or more foliage masks are missing.", MessageType.Warning);
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Mask Assets", EditorStyles.boldLabel);
 
-            if (GUILayout.Button("Create And Assign Missing Masks"))
+            maskResolution = (MaskResolution)EditorGUILayout.EnumPopup("Mask Resolution", maskResolution);
+
+            if (GUILayout.Button("Prepare Unique Material + Masks For This Renderer"))
             {
                 SaveWorkingTexturesIfNeeded();
-                CreateAndAssignMissingMasks(targetMaterial);
-                RefreshMaskReferences(targetMaterial);
-            }
-        }
-
-        using (new EditorGUI.DisabledScope(true))
-        {
-            for (int i = 0; i < MaskPropertyNames.Length; i++)
-            {
-                EditorGUILayout.ObjectField(MaskDisplayNames[i], sourceMaskTextures[i], typeof(Texture2D), false);
-            }
-        }
-
-        using (new EditorGUI.DisabledScope(!HasAllMasks()))
-        {
-            if (GUILayout.Button("Resize Masks To Resolution"))
-            {
-                SaveWorkingTexturesIfNeeded();
-                ResizeMasksToResolution(targetMaterial);
+                PrepareUniqueMaterialAndMasks();
+                targetMaterial = GetTargetMaterial();
                 RefreshMaskReferences(targetMaterial);
             }
 
-            if (GUILayout.Button("Erase All Masks"))
+            if (!HasAllMasks())
             {
-                if (EditorUtility.DisplayDialog("Erase All Foliage Masks", "This will clear all foliage paint for the selected renderer material.", "Erase All", "Cancel"))
+                EditorGUILayout.HelpBox("One or more foliage masks are missing.", MessageType.Warning);
+
+                if (GUILayout.Button("Create And Assign Missing Masks"))
                 {
                     SaveWorkingTexturesIfNeeded();
-                    EraseAllMasks(targetMaterial);
+                    CreateAndAssignMissingMasks(targetMaterial);
                     RefreshMaskReferences(targetMaterial);
                 }
             }
-        }
 
-        if (!(GetTargetCollider() is MeshCollider))
-        {
-            EditorGUILayout.HelpBox("A MeshCollider is required for Scene painting.", MessageType.Warning);
-
-            if (GUILayout.Button("Add / Replace With MeshCollider"))
+            using (new EditorGUI.DisabledScope(true))
             {
-                EnsureMeshCollider();
+                for (int i = 0; i < MaskPropertyNames.Length; i++)
+                {
+                    EditorGUILayout.ObjectField(MaskDisplayNames[i], sourceMaskTextures[i], typeof(Texture2D), false);
+                }
+            }
+
+            using (new EditorGUI.DisabledScope(!HasAllMasks()))
+            {
+                if (GUILayout.Button("Resize Masks To Resolution"))
+                {
+                    SaveWorkingTexturesIfNeeded();
+                    ResizeMasksToResolution(targetMaterial);
+                    RefreshMaskReferences(targetMaterial);
+                }
+
+                if (GUILayout.Button("Erase All Masks"))
+                {
+                    if (EditorUtility.DisplayDialog("Erase All Foliage Masks", "This will clear all foliage paint for the selected renderer material.", "Erase All", "Cancel"))
+                    {
+                        SaveWorkingTexturesIfNeeded();
+                        EraseAllMasks(targetMaterial);
+                        RefreshMaskReferences(targetMaterial);
+                    }
+                }
+            }
+
+            if (!(GetTargetCollider() is MeshCollider))
+            {
+                EditorGUILayout.HelpBox("A MeshCollider is required for Scene painting.", MessageType.Warning);
+
+                if (GUILayout.Button("Add / Replace With MeshCollider"))
+                {
+                    EnsureMeshCollider();
+                }
+            }
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Brush", EditorStyles.boldLabel);
+            paintingEnabled = EditorGUILayout.Toggle("Painting Enabled", paintingEnabled);
+            autoSaveOnStrokeEnd = EditorGUILayout.Toggle("Auto Save On Stroke End", autoSaveOnStrokeEnd);
+            brushMode = (BrushMode)EditorGUILayout.EnumPopup("Mode", brushMode);
+            brushSizePixels = EditorGUILayout.Slider("Size (pixels)", brushSizePixels, 0.01f, 20f);
+            brushStrength = EditorGUILayout.Slider("Strength", brushStrength, 0.01f, 1f);
+            brushSoftness = EditorGUILayout.Slider("Softness", brushSoftness, 0f, 1f);
+
+            if (strokeDirty)
+            {
+                EditorGUILayout.HelpBox("There are unsaved mask changes.", MessageType.Warning);
+            }
+
+            using (new EditorGUI.DisabledScope(!HasLiveWorkingTextures() && !strokeDirty))
+            {
+                if (GUILayout.Button("Save Masks Now"))
+                {
+                    SaveWorkingTexturesIfNeeded();
+                    RefreshMaskReferences(targetMaterial);
+                }
+            }
+
+            EditorGUILayout.Space();
+            EditorGUILayout.HelpBox(
+                "Scene controls:\n" +
+                "- Left Mouse: paint\n" +
+                "- Shift + Left Mouse: erase\n" +
+                "- Lower mask resolution gives a chunkier, vertex-paint-like look\n" +
+                "- Disable auto save to avoid the lag spike on mouse release\n" +
+                "- Use the unique material button so painting only affects this renderer",
+                MessageType.None);
+
+            if (targetMaterial.HasProperty(UseFoliagePropertyName) && targetMaterial.GetFloat(UseFoliagePropertyName) < 0.5f)
+            {
+                if (GUILayout.Button("Enable Foliage On Material"))
+                {
+                    Undo.RecordObject(targetMaterial, "Enable Foliage");
+                    targetMaterial.SetFloat(UseFoliagePropertyName, 1f);
+                    EditorUtility.SetDirty(targetMaterial);
+                }
             }
         }
-
-        EditorGUILayout.Space();
-        EditorGUILayout.LabelField("Brush", EditorStyles.boldLabel);
-        paintingEnabled = EditorGUILayout.Toggle("Painting Enabled", paintingEnabled);
-        autoSaveOnStrokeEnd = EditorGUILayout.Toggle("Auto Save On Stroke End", autoSaveOnStrokeEnd);
-        brushMode = (BrushMode)EditorGUILayout.EnumPopup("Mode", brushMode);
-        brushSizePixels = EditorGUILayout.Slider("Size (pixels)", brushSizePixels, 0.01f, 20f);
-        brushStrength = EditorGUILayout.Slider("Strength", brushStrength, 0.01f, 1f);
-        brushSoftness = EditorGUILayout.Slider("Softness", brushSoftness, 0f, 1f);
-
-        if (strokeDirty)
-        {
-            EditorGUILayout.HelpBox("There are unsaved mask changes.", MessageType.Warning);
-        }
-
-        using (new EditorGUI.DisabledScope(!HasLiveWorkingTextures() && !strokeDirty))
-        {
-            if (GUILayout.Button("Save Masks Now"))
-            {
-                SaveWorkingTexturesIfNeeded();
-                RefreshMaskReferences(targetMaterial);
-            }
-        }
-
-        EditorGUILayout.Space();
-        EditorGUILayout.HelpBox(
-            "Scene controls:\n" +
-            "- Left Mouse: paint\n" +
-            "- Shift + Left Mouse: erase\n" +
-            "- Lower mask resolution gives a chunkier, vertex-paint-like look\n" +
-            "- Disable auto save to avoid the lag spike on mouse release\n" +
-            "- Use the unique material button so painting only affects this renderer",
-            MessageType.None);
-
-        if (targetMaterial.HasProperty(UseFoliagePropertyName) && targetMaterial.GetFloat(UseFoliagePropertyName) < 0.5f)
-        {
-            if (GUILayout.Button("Enable Foliage On Material"))
-            {
-                Undo.RecordObject(targetMaterial, "Enable Foliage");
-                targetMaterial.SetFloat(UseFoliagePropertyName, 1f);
-                EditorUtility.SetDirty(targetMaterial);
-            }
-        }
-
-        EditorGUILayout.EndScrollView();
     }
 
     private void OnSceneGUI(SceneView sceneView)
     {
+        if (!toolEnabled)
+        {
+            isPainting = false;
+            hasLastPaintPoint = false;
+
+            if (GUIUtility.hotControl != 0)
+            {
+                GUIUtility.hotControl = 0;
+            }
+
+            return;
+        }
+
         if (!paintingEnabled || targetRenderer == null)
         {
             return;

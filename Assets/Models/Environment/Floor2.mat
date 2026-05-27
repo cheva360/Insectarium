@@ -52,6 +52,42 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _FoliageMaskNegX:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _FoliageMaskNegY:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _FoliageMaskNegZ:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _FoliageMaskPosX:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _FoliageMaskPosY:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _FoliageMaskPosZ:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _FoliageMaskX:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _FoliageMaskY:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _FoliageMaskZ:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _FoliageTexture:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
@@ -129,6 +165,8 @@ Material:
     - _FoliageSlopeInfluence: 1
     - _FoliageSlopeMin: 0.2
     - _FoliageSlopePower: 2
+    - _FoliageSoftness: 0.2
+    - _FoliageTransparency: 1
     - _FoliageTriplanarScale: 1
     - _GlossMapScale: 0
     - _Glossiness: 0
@@ -165,6 +203,8 @@ Material:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _FoliageColor: {r: 0.96765494, g: 0.96765494, b: 0.96765494, a: 1}
+    - _FoliageMaskBoundsMin: {r: 0, g: 0, b: 0, a: 0}
+    - _FoliageMaskBoundsSize: {r: 1, g: 1, b: 1, a: 0}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
