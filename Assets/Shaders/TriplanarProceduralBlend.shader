@@ -6,9 +6,12 @@ Shader "Custom/TriplanarProceduralBlend"
         _TextureB ("Texture B", 2D) = "white" {}
         [Toggle] _UseFoliage ("Use Foliage", Float) = 0
         _FoliageTexture ("Foliage Texture", 2D) = "white" {}
-        _FoliageMaskX ("Foliage Mask X", 2D) = "black" {}
-        _FoliageMaskY ("Foliage Mask Y", 2D) = "black" {}
-        _FoliageMaskZ ("Foliage Mask Z", 2D) = "black" {}
+        _FoliageMaskPosX ("Foliage Mask +X", 2D) = "black" {}
+        _FoliageMaskNegX ("Foliage Mask -X", 2D) = "black" {}
+        _FoliageMaskPosY ("Foliage Mask +Y", 2D) = "black" {}
+        _FoliageMaskNegY ("Foliage Mask -Y", 2D) = "black" {}
+        _FoliageMaskPosZ ("Foliage Mask +Z", 2D) = "black" {}
+        _FoliageMaskNegZ ("Foliage Mask -Z", 2D) = "black" {}
 
         _BaseColor ("Base Color", Color) = (1,1,1,1)
         _FoliageColor ("Foliage Color", Color) = (1,1,1,1)
@@ -84,14 +87,23 @@ Shader "Custom/TriplanarProceduralBlend"
             TEXTURE2D(_FoliageTexture);
             SAMPLER(sampler_FoliageTexture);
 
-            TEXTURE2D(_FoliageMaskX);
-            SAMPLER(sampler_FoliageMaskX);
+            TEXTURE2D(_FoliageMaskPosX);
+            SAMPLER(sampler_FoliageMaskPosX);
 
-            TEXTURE2D(_FoliageMaskY);
-            SAMPLER(sampler_FoliageMaskY);
+            TEXTURE2D(_FoliageMaskNegX);
+            SAMPLER(sampler_FoliageMaskNegX);
 
-            TEXTURE2D(_FoliageMaskZ);
-            SAMPLER(sampler_FoliageMaskZ);
+            TEXTURE2D(_FoliageMaskPosY);
+            SAMPLER(sampler_FoliageMaskPosY);
+
+            TEXTURE2D(_FoliageMaskNegY);
+            SAMPLER(sampler_FoliageMaskNegY);
+
+            TEXTURE2D(_FoliageMaskPosZ);
+            SAMPLER(sampler_FoliageMaskPosZ);
+
+            TEXTURE2D(_FoliageMaskNegZ);
+            SAMPLER(sampler_FoliageMaskNegZ);
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _BaseColor;
@@ -196,13 +208,17 @@ Shader "Custom/TriplanarProceduralBlend"
                 float2 uvY = saturate((positionOS.xz - boundsMin.xz) / boundsSize.xz);
                 float2 uvZ = saturate((positionOS.xy - boundsMin.xy) / boundsSize.xy);
 
-                if (normalOS.x < 0.0) uvX.x = 1.0 - uvX.x;
-                if (normalOS.y < 0.0) uvY.x = 1.0 - uvY.x;
-                if (normalOS.z < 0.0) uvZ.x = 1.0 - uvZ.x;
+                float maskX = normalOS.x >= 0.0
+                    ? SAMPLE_TEXTURE2D(_FoliageMaskPosX, sampler_FoliageMaskPosX, uvX).r
+                    : SAMPLE_TEXTURE2D(_FoliageMaskNegX, sampler_FoliageMaskNegX, uvX).r;
 
-                float maskX = SAMPLE_TEXTURE2D(_FoliageMaskX, sampler_FoliageMaskX, uvX).r;
-                float maskY = SAMPLE_TEXTURE2D(_FoliageMaskY, sampler_FoliageMaskY, uvY).r;
-                float maskZ = SAMPLE_TEXTURE2D(_FoliageMaskZ, sampler_FoliageMaskZ, uvZ).r;
+                float maskY = normalOS.y >= 0.0
+                    ? SAMPLE_TEXTURE2D(_FoliageMaskPosY, sampler_FoliageMaskPosY, uvY).r
+                    : SAMPLE_TEXTURE2D(_FoliageMaskNegY, sampler_FoliageMaskNegY, uvY).r;
+
+                float maskZ = normalOS.z >= 0.0
+                    ? SAMPLE_TEXTURE2D(_FoliageMaskPosZ, sampler_FoliageMaskPosZ, uvZ).r
+                    : SAMPLE_TEXTURE2D(_FoliageMaskNegZ, sampler_FoliageMaskNegZ, uvZ).r;
 
                 return maskX * weights.x + maskY * weights.y + maskZ * weights.z;
             }

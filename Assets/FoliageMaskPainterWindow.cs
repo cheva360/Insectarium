@@ -11,9 +11,32 @@ public sealed class FoliageMaskPainterWindow : EditorWindow
 
     private static readonly string[] MaskPropertyNames =
     {
-        "_FoliageMaskX",
-        "_FoliageMaskY",
-        "_FoliageMaskZ"
+        "_FoliageMaskPosX",
+        "_FoliageMaskNegX",
+        "_FoliageMaskPosY",
+        "_FoliageMaskNegY",
+        "_FoliageMaskPosZ",
+        "_FoliageMaskNegZ"
+    };
+
+    private static readonly string[] MaskDisplayNames =
+    {
+        "Mask +X",
+        "Mask -X",
+        "Mask +Y",
+        "Mask -Y",
+        "Mask +Z",
+        "Mask -Z"
+    };
+
+    private static readonly string[] MaskAssetSuffixes =
+    {
+        "PosX",
+        "NegX",
+        "PosY",
+        "NegY",
+        "PosZ",
+        "NegZ"
     };
 
     private enum BrushMode
@@ -47,16 +70,18 @@ public sealed class FoliageMaskPainterWindow : EditorWindow
     private float brushSoftness = 0.5f;
     private MaskResolution maskResolution = MaskResolution.R128;
 
-    private readonly Texture2D[] sourceMaskTextures = new Texture2D[3];
-    private readonly Texture2D[] workingTextures = new Texture2D[3];
-    private readonly Color32[][] workingPixels = new Color32[3][];
-    private readonly string[] sourceMaskPaths = new string[3];
+    private readonly Texture2D[] sourceMaskTextures = new Texture2D[6];
+    private readonly Texture2D[] workingTextures = new Texture2D[6];
+    private readonly Color32[][] workingPixels = new Color32[6][];
+    private readonly string[] sourceMaskPaths = new string[6];
 
     private bool strokeDirty;
     private bool isPainting;
 
     private Vector3 lastPaintLocalPoint;
     private bool hasLastPaintPoint;
+
+    private Vector2 scrollPosition;
 
     [MenuItem("Tools/Foliage Mask Painter")]
     public static void OpenWindow()
@@ -92,6 +117,8 @@ public sealed class FoliageMaskPainterWindow : EditorWindow
 
     private void OnGUI()
     {
+        scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition);
+
         EditorGUILayout.LabelField("Target", EditorStyles.boldLabel);
 
         targetRenderer = (Renderer)EditorGUILayout.ObjectField("Renderer", targetRenderer, typeof(Renderer), true);
@@ -159,9 +186,10 @@ public sealed class FoliageMaskPainterWindow : EditorWindow
 
         using (new EditorGUI.DisabledScope(true))
         {
-            EditorGUILayout.ObjectField("Mask X", sourceMaskTextures[0], typeof(Texture2D), false);
-            EditorGUILayout.ObjectField("Mask Y", sourceMaskTextures[1], typeof(Texture2D), false);
-            EditorGUILayout.ObjectField("Mask Z", sourceMaskTextures[2], typeof(Texture2D), false);
+            for (int i = 0; i < MaskPropertyNames.Length; i++)
+            {
+                EditorGUILayout.ObjectField(MaskDisplayNames[i], sourceMaskTextures[i], typeof(Texture2D), false);
+            }
         }
 
         using (new EditorGUI.DisabledScope(!HasAllMasks()))
@@ -208,6 +236,15 @@ public sealed class FoliageMaskPainterWindow : EditorWindow
             EditorGUILayout.HelpBox("There are unsaved mask changes.", MessageType.Warning);
         }
 
+        using (new EditorGUI.DisabledScope(!HasLiveWorkingTextures() && !strokeDirty))
+        {
+            if (GUILayout.Button("Save Masks Now"))
+            {
+                SaveWorkingTexturesIfNeeded();
+                RefreshMaskReferences(targetMaterial);
+            }
+        }
+
         EditorGUILayout.Space();
         EditorGUILayout.HelpBox(
             "Scene controls:\n" +
@@ -228,14 +265,7 @@ public sealed class FoliageMaskPainterWindow : EditorWindow
             }
         }
 
-        using (new EditorGUI.DisabledScope(!HasLiveWorkingTextures() && !strokeDirty))
-        {
-            if (GUILayout.Button("Save Masks Now"))
-            {
-                SaveWorkingTexturesIfNeeded();
-                RefreshMaskReferences(targetMaterial);
-            }
-        }
+        EditorGUILayout.EndScrollView();
     }
 
     private void OnSceneGUI(SceneView sceneView)
@@ -544,7 +574,7 @@ public sealed class FoliageMaskPainterWindow : EditorWindow
             directory = "Assets";
         }
 
-        string axisSuffix = axisIndex == 0 ? "X" : axisIndex == 1 ? "Y" : "Z";
+        string axisSuffix = MaskAssetSuffixes[axisIndex];
         string maskPath = AssetDatabase.GenerateUniqueAssetPath(directory + "/" + targetRenderer.name + "_" + targetMaterial.name + "_FoliageMask" + axisSuffix + ".png");
 
         int size = Mathf.Max(1, (int)maskResolution);
@@ -788,22 +818,13 @@ public sealed class FoliageMaskPainterWindow : EditorWindow
         float sharpness = GetSharpness(targetMaterial);
         Vector3 weights = GetTriplanarWeights(localNormal, sharpness);
 
-        for (int i = 0; i < 3; i++)
-        {
-            GetProjectedUvAndPlaneSize(i, localPoint, localNormal, bounds, out Vector2 uv, out Vector2 planeSize);
+        int maskIndexX = GetSignedMaskIndex(0, localNormal.x);
+        int maskIndexY = GetSignedMaskIndex(1, localNormal.y);
+        int maskIndexZ = GetSignedMaskIndex(2, localNormal.z);
 
-            Texture2D maskTexture = workingTextures[i] != null ? workingTextures[i] : sourceMaskTextures[i];
-            if (maskTexture == null)
-            {
-                continue;
-            }
-
-            float texelWidth = planeSize.x / Mathf.Max(maskTexture.width, 1);
-            float texelHeight = planeSize.y / Mathf.Max(maskTexture.height, 1);
-            float brushRadiusLocal = Mathf.Max(0.0001f, brushSizePixels * Mathf.Min(texelWidth, texelHeight));
-
-            PaintIntoMask(i, uv, planeSize, erase, weights[i], brushRadiusLocal);
-        }
+        PaintProjectedAxis(maskIndexX, 0, localPoint, localNormal, bounds, erase, weights.x);
+        PaintProjectedAxis(maskIndexY, 1, localPoint, localNormal, bounds, erase, weights.y);
+        PaintProjectedAxis(maskIndexZ, 2, localPoint, localNormal, bounds, erase, weights.z);
     }
 
     private void PaintInterpolatedStroke(RaycastHit hit, bool erase, Material targetMaterial)
@@ -845,6 +866,23 @@ public sealed class FoliageMaskPainterWindow : EditorWindow
         }
 
         lastPaintLocalPoint = currentLocalPoint;
+    }
+
+    private void PaintProjectedAxis(int maskIndex, int axisIndex, Vector3 localPoint, Vector3 localNormal, Bounds bounds, bool erase, float axisWeight)
+    {
+        GetProjectedUvAndPlaneSize(axisIndex, localPoint, localNormal, bounds, out Vector2 uv, out Vector2 planeSize);
+
+        Texture2D maskTexture = workingTextures[maskIndex] != null ? workingTextures[maskIndex] : sourceMaskTextures[maskIndex];
+        if (maskTexture == null)
+        {
+            return;
+        }
+
+        float texelWidth = planeSize.x / Mathf.Max(maskTexture.width, 1);
+        float texelHeight = planeSize.y / Mathf.Max(maskTexture.height, 1);
+        float brushRadiusLocal = Mathf.Max(0.0001f, brushSizePixels * Mathf.Min(texelWidth, texelHeight));
+
+        PaintIntoMask(maskIndex, uv, planeSize, erase, axisWeight, brushRadiusLocal);
     }
 
     private void PaintIntoMask(int maskIndex, Vector2 centerUv, Vector2 planeSize, bool erase, float axisWeight, float brushRadiusLocal)
@@ -974,11 +1012,6 @@ public sealed class FoliageMaskPainterWindow : EditorWindow
                 Mathf.InverseLerp(min.z, min.z + size.z, localPoint.z),
                 Mathf.InverseLerp(min.y, min.y + size.y, localPoint.y));
 
-            if (localNormal.x < 0f)
-            {
-                uv.x = 1f - uv.x;
-            }
-
             planeSize = new Vector2(size.z, size.y);
             return;
         }
@@ -989,11 +1022,6 @@ public sealed class FoliageMaskPainterWindow : EditorWindow
                 Mathf.InverseLerp(min.x, min.x + size.x, localPoint.x),
                 Mathf.InverseLerp(min.z, min.z + size.z, localPoint.z));
 
-            if (localNormal.y < 0f)
-            {
-                uv.x = 1f - uv.x;
-            }
-
             planeSize = new Vector2(size.x, size.z);
             return;
         }
@@ -1001,11 +1029,6 @@ public sealed class FoliageMaskPainterWindow : EditorWindow
         uv = new Vector2(
             Mathf.InverseLerp(min.x, min.x + size.x, localPoint.x),
             Mathf.InverseLerp(min.y, min.y + size.y, localPoint.y));
-
-        if (localNormal.z < 0f)
-        {
-            uv.x = 1f - uv.x;
-        }
 
         planeSize = new Vector2(size.x, size.y);
     }
@@ -1241,5 +1264,11 @@ public sealed class FoliageMaskPainterWindow : EditorWindow
         }
 
         return names;
+    }
+
+    // Add this helper near the other painter helpers:
+    private static int GetSignedMaskIndex(int axisIndex, float normalComponent)
+    {
+        return axisIndex * 2 + (normalComponent < 0f ? 1 : 0);
     }
 }
