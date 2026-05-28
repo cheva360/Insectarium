@@ -313,18 +313,27 @@ public sealed class NavMeshFacePatchTool : EditorWindow
         Vector3[] sourceVertices = sourceMesh.vertices;
         Vector3[] faceNormals = BuildFaceNormals(sourceMesh);
 
+        List<int> filteredTriangles = FilterTrianglesInsideBlockingGeometry(
+            selectedTriangles,
+            sourceTriangles,
+            sourceVertices,
+            faceNormals);
+
+        if (filteredTriangles.Count == 0)
+            return;
+
         GetPatchTransformWorld(
             sourceTriangles,
             sourceVertices,
             faceNormals,
-            selectedTriangles,
+            filteredTriangles,
             out Vector3 patchWorldCenter,
             out Quaternion patchWorldRotation);
 
         Mesh patchMesh = BuildPatchMesh(
             sourceMesh,
             sourceTriangles,
-            selectedTriangles,
+            filteredTriangles,
             sourceObject.transform,
             patchWorldCenter,
             patchWorldRotation);
@@ -870,6 +879,11 @@ public sealed class NavMeshFacePatchTool : EditorWindow
                     continue;
                 }
 
+                if (IsFloodEdgeBlocked(triangles, vertices, triangle, neighbor))
+                {
+                    continue;
+                }
+
                 visited[neighbor] = true;
                 queue.Enqueue(neighbor);
             }
@@ -1070,16 +1084,21 @@ public sealed class NavMeshFacePatchTool : EditorWindow
         return true;
     }
 
-    // Returns the closest matching boundary segment pair between two patches.
+    // Returns the closest boundary segment pair between two patches, ranked by
+    // actual closest point on segment to segment (handles mismatched edge sizes).
     private static bool TryGetSeamBetweenPatches(
         MeshFilter sourcePatchFilter,
         MeshFilter targetPatchFilter,
         out BoundarySegment sourceSeam,
         out BoundarySegment targetSeam,
+        out Vector3 sourceContact,
+        out Vector3 targetContact,
         out float closestDistanceSqr)
     {
         sourceSeam = default;
         targetSeam = default;
+        sourceContact = Vector3.zero;
+        targetContact = Vector3.zero;
         closestDistanceSqr = float.MaxValue;
 
         List<BoundarySegment> sourceSegments = GetBoundarySegments(sourcePatchFilter);
@@ -1098,10 +1117,10 @@ public sealed class NavMeshFacePatchTool : EditorWindow
             {
                 BoundarySegment tgt = targetSegments[j];
 
-                // Use midpoint-to-midpoint distance to rank candidate seam pairs.
-                Vector3 srcMid = (src.A + src.B) * 0.5f;
-                Vector3 tgtMid = (tgt.A + tgt.B) * 0.5f;
-                float distSqr = (srcMid - tgtMid).sqrMagnitude;
+                GetClosestPointsOnSegments(src.A, src.B, tgt.A, tgt.B,
+                    out Vector3 srcPt, out Vector3 tgtPt);
+
+                float distSqr = (srcPt - tgtPt).sqrMagnitude;
 
                 if (distSqr >= closestDistanceSqr)
                     continue;
@@ -1109,11 +1128,39 @@ public sealed class NavMeshFacePatchTool : EditorWindow
                 closestDistanceSqr = distSqr;
                 sourceSeam = src;
                 targetSeam = tgt;
+                sourceContact = srcPt;
+                targetContact = tgtPt;
                 found = true;
             }
         }
 
         return found;
+    }
+
+    // Compute the overlap width between two seam segments along their shared axis.
+    // Only meaningful when the edges are roughly parallel; returns 0 otherwise.
+    private static float GetSeamOverlapWidth(BoundarySegment src, BoundarySegment tgt)
+    {
+        Vector3 srcDir = src.B - src.A;
+        float srcLen = srcDir.magnitude;
+        if (srcLen < 0.0001f) return 0f;
+        Vector3 srcAxis = srcDir / srcLen;
+
+        Vector3 tgtDir = tgt.B - tgt.A;
+        float tgtLen = tgtDir.magnitude;
+        if (tgtLen < 0.0001f) return 0f;
+
+        // Only compute overlap when edges are roughly parallel.
+        if (Mathf.Abs(Vector3.Dot(srcAxis, tgtDir / tgtLen)) < 0.85f)
+            return 0f;
+
+        float tA = Vector3.Dot(tgt.A - src.A, srcAxis);
+        float tB = Vector3.Dot(tgt.B - src.A, srcAxis);
+        if (tA > tB) { float tmp = tA; tA = tB; tB = tmp; }
+
+        float overlapMin = Mathf.Max(0f, tA);
+        float overlapMax = Mathf.Min(srcLen, tB);
+        return Mathf.Max(0f, overlapMax - overlapMin);
     }
 
     private static List<BoundarySegment> GetBoundarySegments(MeshFilter meshFilter)
@@ -1251,9 +1298,6 @@ public sealed class NavMeshFacePatchTool : EditorWindow
             NavMeshSurface sourceSurface = allSurfaces[i];
             if (sourceSurface == null) continue;
 
-            if (restrictLinksToCurrentSource && !IsSurfaceFromCurrentSource(sourceSurface))
-                continue;
-
             MeshFilter sourceFilter = sourceSurface.GetComponentInChildren<MeshFilter>();
             if (sourceFilter == null || sourceFilter.sharedMesh == null) continue;
 
@@ -1261,9 +1305,6 @@ public sealed class NavMeshFacePatchTool : EditorWindow
             {
                 NavMeshSurface targetSurface = allSurfaces[j];
                 if (targetSurface == null) continue;
-
-                if (restrictLinksToCurrentSource && !IsSurfaceFromCurrentSource(targetSurface))
-                    continue;
 
                 if (sourceSurface.agentTypeID != targetSurface.agentTypeID)
                     continue;
@@ -1275,13 +1316,23 @@ public sealed class NavMeshFacePatchTool : EditorWindow
                     sourceFilter, targetFilter,
                     out BoundarySegment sourceSeam,
                     out BoundarySegment targetSeam,
+                    out Vector3 sourceContact,
+                    out Vector3 targetContact,
                     out float closestDistanceSqr))
                     continue;
 
-                if (closestDistanceSqr > maxDistanceSqr)
+                Vector3 sourcePairNormal = GetMeshAverageNormal(sourceFilter);
+                Vector3 targetPairNormal = GetMeshAverageNormal(targetFilter);
+                bool sourcePairIsWall = Mathf.Abs(Vector3.Dot(sourcePairNormal, Vector3.up)) < 0.5f;
+                bool targetPairIsWall = Mathf.Abs(Vector3.Dot(targetPairNormal, Vector3.up)) < 0.5f;
+                bool isWallToFloorPair = sourcePairIsWall ^ targetPairIsWall;
+
+                if (closestDistanceSqr > maxDistanceSqr && !isWallToFloorPair)
                     continue;
 
-                CreatePatchLink(linkContainer, sourceFilter, targetFilter, sourceSeam, targetSeam, sourceSurface.agentTypeID);
+                CreatePatchLink(linkContainer, sourceFilter, targetFilter,
+                    sourceSeam, targetSeam, sourceContact, targetContact,
+                    sourceSurface.agentTypeID);
             }
         }
 
@@ -1307,15 +1358,14 @@ public sealed class NavMeshFacePatchTool : EditorWindow
         MeshFilter targetFilter,
         BoundarySegment sourceSeam,
         BoundarySegment targetSeam,
+        Vector3 sourceContact,
+        Vector3 targetContact,
         int agentTypeId)
     {
-        // Midpoints of each seam edge.
-        Vector3 sourceMid = (sourceSeam.A + sourceSeam.B) * 0.5f;
-        Vector3 targetMid = (targetSeam.A + targetSeam.B) * 0.5f;
+        Vector3 sourceMid = sourceContact;
+        Vector3 targetMid = targetContact;
 
-        // Inset each midpoint toward its mesh centroid so the starting search
-        // position is already roughly on the surface interior.
-        const float inset = 0.08f;
+        const float inset = 0.35f;
 
         Vector3 srcCentroid = sourceFilter.transform.TransformPoint(sourceFilter.sharedMesh.bounds.center);
         Vector3 tgtCentroid = targetFilter.transform.TransformPoint(targetFilter.sharedMesh.bounds.center);
@@ -1328,74 +1378,161 @@ public sealed class NavMeshFacePatchTool : EditorWindow
         if (tgtInsetDir.magnitude > 0.001f)
             targetMid += tgtInsetDir.normalized * Mathf.Min(inset, tgtInsetDir.magnitude * 0.4f);
 
-        // Separate the two candidate positions along the link axis by autoLinkHeight
-        // so the snap search starts further onto each surface.
-        if (autoLinkHeight > 0f)
-        {
-            Vector3 apart = (targetMid - sourceMid).normalized * (autoLinkHeight * 0.5f);
-            sourceMid -= apart;
-            targetMid += apart;
-        }
-
-        // Snap each position to the nearest valid navmesh point for this agent type.
-        // Use a generous search radius so the snap succeeds even with slight offsets.
-        float snapRadius = Mathf.Max(maxAutoLinkDistance, 1.0f);
+        float initialSnapRadius = Mathf.Max(maxAutoLinkDistance, 1.0f);
         NavMeshQueryFilter filter = new NavMeshQueryFilter
         {
             agentTypeID = agentTypeId,
             areaMask = NavMesh.AllAreas
         };
 
-        if (NavMesh.SamplePosition(sourceMid, out NavMeshHit srcHit, snapRadius, filter))
-            sourceMid = srcHit.position;
-        else
+        if (!NavMesh.SamplePosition(sourceMid, out NavMeshHit srcHit, initialSnapRadius, filter))
         {
             Debug.LogWarning($"[NavMeshFacePatchTool] Could not snap link start to navmesh near {sourceMid}. Link skipped.");
             return;
         }
+        sourceMid = srcHit.position;
 
-        if (NavMesh.SamplePosition(targetMid, out NavMeshHit tgtHit, snapRadius, filter))
-            targetMid = tgtHit.position;
-        else
+        if (!NavMesh.SamplePosition(targetMid, out NavMeshHit tgtHit, initialSnapRadius, filter))
         {
             Debug.LogWarning($"[NavMeshFacePatchTool] Could not snap link end to navmesh near {targetMid}. Link skipped.");
             return;
         }
+        targetMid = tgtHit.position;
 
-        // Width = length of the shorter seam so the link spans the full shared edge.
-        float srcLen = Vector3.Distance(sourceSeam.A, sourceSeam.B);
-        float tgtLen = Vector3.Distance(targetSeam.A, targetSeam.B);
-        float seamWidth = Mathf.Max(Mathf.Min(srcLen, tgtLen), autoLinkWidth);
-
-        // Seam direction = average of both edge directions.
-        Vector3 srcEdgeDir = (sourceSeam.B - sourceSeam.A).normalized;
-        Vector3 tgtEdgeDir = (targetSeam.B - targetSeam.A).normalized;
-        if (Vector3.Dot(srcEdgeDir, tgtEdgeDir) < 0f)
-            tgtEdgeDir = -tgtEdgeDir;
-        Vector3 seamDir = (srcEdgeDir + tgtEdgeDir).normalized;
-
-        // Link direction = snapped source → snapped target.
         Vector3 linkDir = targetMid - sourceMid;
         if (linkDir.sqrMagnitude < 0.000001f)
             return;
         linkDir = linkDir.normalized;
 
-        // Re-orthogonalise seamDir against linkDir.
-        seamDir = seamDir - Vector3.Dot(seamDir, linkDir) * linkDir;
-        if (seamDir.sqrMagnitude < 0.0001f)
-        {
-            seamDir = Mathf.Abs(Vector3.Dot(linkDir, Vector3.up)) < 0.9f ? Vector3.up : Vector3.right;
-            seamDir = seamDir - Vector3.Dot(seamDir, linkDir) * linkDir;
-        }
-        seamDir = seamDir.normalized;
+        // Width: horizontal span of the shared seam only
+        Vector3 seamA_flat = new Vector3(sourceSeam.A.x, 0f, sourceSeam.A.z);
+        Vector3 seamB_flat = new Vector3(sourceSeam.B.x, 0f, sourceSeam.B.z);
+        float seamWidth = Mathf.Max(Vector3.Distance(seamA_flat, seamB_flat), autoLinkWidth);
 
-        Vector3 upDir = Vector3.Cross(linkDir, seamDir).normalized;
-        Quaternion linkRotation = Quaternion.LookRotation(linkDir, upDir);
+        // Classify surfaces.
+        Vector3 sourceNormal = GetMeshAverageNormal(sourceFilter);
+        Vector3 targetNormal = GetMeshAverageNormal(targetFilter);
+        bool sourceIsWall = Mathf.Abs(Vector3.Dot(sourceNormal, Vector3.up)) < 0.5f;
+        bool targetIsWall = Mathf.Abs(Vector3.Dot(targetNormal, Vector3.up)) < 0.5f;
+
+        Quaternion linkRotation;
+        Vector3 linkCenter;
+
+        if (sourceIsWall && targetIsWall)
+        {
+            float srcWorldMinY = sourceFilter.transform.TransformPoint(sourceFilter.sharedMesh.bounds.min).y;
+            float srcWorldMaxY = sourceFilter.transform.TransformPoint(sourceFilter.sharedMesh.bounds.max).y;
+            float tgtWorldMinY = targetFilter.transform.TransformPoint(targetFilter.sharedMesh.bounds.min).y;
+            float tgtWorldMaxY = targetFilter.transform.TransformPoint(targetFilter.sharedMesh.bounds.max).y;
+            float sharedMinY = Mathf.Min(srcWorldMinY, tgtWorldMinY);
+            float sharedMaxY = Mathf.Max(srcWorldMaxY, tgtWorldMaxY);
+            float sharedMidY = (sharedMinY + sharedMaxY) * 0.5f;
+
+            seamWidth = sharedMaxY - sharedMinY;
+
+            float wallSnapRadius = (sharedMaxY - sharedMinY) * 0.5f + 1.0f;
+
+            Vector3 srcSearchOrigin = new Vector3(sourceMid.x, sharedMidY, sourceMid.z);
+            if (NavMesh.SamplePosition(srcSearchOrigin, out NavMeshHit srcWallHit, wallSnapRadius, filter))
+                sourceMid = srcWallHit.position;
+            else
+                sourceMid = srcSearchOrigin;
+
+            Vector3 tgtSearchOrigin = new Vector3(targetMid.x, sharedMidY, targetMid.z);
+            if (NavMesh.SamplePosition(tgtSearchOrigin, out NavMeshHit tgtWallHit, wallSnapRadius, filter))
+                targetMid = tgtWallHit.position;
+            else
+                targetMid = tgtSearchOrigin;
+
+            Vector3 flatDir = new Vector3(targetMid.x - sourceMid.x, 0f, targetMid.z - sourceMid.z);
+            if (flatDir.sqrMagnitude < 0.0001f)
+                flatDir = Vector3.forward;
+            flatDir = flatDir.normalized;
+
+            linkRotation = Quaternion.LookRotation(flatDir, Vector3.up) * Quaternion.Euler(0f, 0f, 90f);
+            linkCenter = (sourceMid + targetMid) * 0.5f;
+        }
+        else if (sourceIsWall || targetIsWall)
+        {
+            MeshFilter wallFilter = sourceIsWall ? sourceFilter : targetFilter;
+            BoundarySegment wallSeam = sourceIsWall ? sourceSeam : targetSeam;
+
+            float wallWorldY1 = wallFilter.transform.TransformPoint(wallFilter.sharedMesh.bounds.min).y;
+            float wallWorldY2 = wallFilter.transform.TransformPoint(wallFilter.sharedMesh.bounds.max).y;
+            float wallMinY = Mathf.Min(wallWorldY1, wallWorldY2);
+            float wallMaxY = Mathf.Max(wallWorldY1, wallWorldY2);
+            float wallHeight = wallMaxY - wallMinY;
+
+            // Width: horizontal span of the wall seam only
+            seamWidth = Mathf.Max(
+                Vector3.Distance(
+                    new Vector3(wallSeam.A.x, 0f, wallSeam.A.z),
+                    new Vector3(wallSeam.B.x, 0f, wallSeam.B.z)),
+                autoLinkWidth);
+
+            float wallFloorSnapRadius = wallHeight * 0.5f + 1.0f;
+
+            Vector3 wallSeamMid = (wallSeam.A + wallSeam.B) * 0.5f;
+            wallSeamMid.y = wallMinY;
+
+            Vector3 wallCentroid = wallFilter.transform.TransformPoint(wallFilter.sharedMesh.bounds.center);
+            Vector3 wallInsetDir = wallCentroid - wallSeamMid;
+            const float wallSurfaceInset = 0.12f;
+
+            Vector3 wallPoint = wallSeamMid;
+            if (wallInsetDir.magnitude > 0.001f)
+                wallPoint += wallInsetDir.normalized * Mathf.Min(wallSurfaceInset, wallInsetDir.magnitude * 0.25f);
+
+            Vector3 wallOutward = sourceIsWall ? sourceNormal : targetNormal;
+            wallOutward = new Vector3(wallOutward.x, 0f, wallOutward.z);
+            if (wallOutward.sqrMagnitude < 0.0001f)
+                wallOutward = Vector3.forward;
+            wallOutward = wallOutward.normalized;
+
+            const float floorSurfaceOffset = 0.2f;
+            Vector3 floorSearchOrigin = wallPoint + wallOutward * floorSurfaceOffset;
+            floorSearchOrigin.y = wallMinY;
+
+            if (NavMesh.SamplePosition(floorSearchOrigin, out NavMeshHit floorHit, wallFloorSnapRadius, filter))
+            {
+                if (sourceIsWall)
+                {
+                    sourceMid = wallPoint;
+                    targetMid = floorHit.position;
+                }
+                else
+                {
+                    sourceMid = floorHit.position;
+                    targetMid = wallPoint;
+                }
+            }
+            else
+            {
+                return;
+            }
+
+            Vector3 wallToFloorDir = sourceIsWall ? targetMid - sourceMid : sourceMid - targetMid;
+            Vector3 flatDir = new Vector3(wallToFloorDir.x, 0f, wallToFloorDir.z);
+            if (flatDir.sqrMagnitude < 0.0001f)
+                flatDir = wallOutward;
+            flatDir = flatDir.normalized;
+
+            linkRotation = Quaternion.LookRotation(flatDir, Vector3.up) * Quaternion.Euler(0f, -90f, 45f);
+            // Center: XZ from the seam midpoint (actual junction), Y at floor level
+            linkCenter = new Vector3(wallSeamMid.x, wallMinY, wallSeamMid.z);
+        }
+        else
+        {
+            // Floor-to-floor: face along linkDir, world up.
+            Vector3 upHint = Mathf.Abs(Vector3.Dot(linkDir, Vector3.up)) > 0.99f ? Vector3.forward : Vector3.up;
+            linkRotation = Quaternion.LookRotation(linkDir, upHint);
+            linkCenter = (sourceMid + targetMid) * 0.5f;
+        }
 
         GameObject linkObject = new GameObject("AutoNavMeshLink");
         Undo.RegisterCreatedObjectUndo(linkObject, "Create NavMesh Patch Link");
         linkObject.transform.SetParent(linkParent.transform, true);
-        linkObject.transform.position = (sourceMid + targetMid) * 0.5f;
+        linkObject.transform.position = linkCenter;
         linkObject.transform.rotation = linkRotation;
         linkObject.transform.localScale = Vector3.one;
 
@@ -1416,6 +1553,7 @@ public sealed class NavMeshFacePatchTool : EditorWindow
         link.bidirectional = true;
         link.autoUpdate = true;
         link.area = 0;
+        link.costModifier = -1f;
         link.agentTypeID = agentTypeId;
     }
 
@@ -1440,5 +1578,170 @@ public sealed class NavMeshFacePatchTool : EditorWindow
             return false;
 
         return surface.transform.parent == sourceObject.transform;
+    }
+
+    private bool IsTriangleCenterBlocked(Vector3 localPoint, Vector3 normal)
+    {
+        Vector3 worldPoint = sourceObject.transform.TransformPoint(localPoint);
+        Vector3 worldNormal = sourceObject.transform.TransformDirection(normal).normalized;
+
+        const float surfaceOffset = 0.02f;
+        const float checkDistance = 0.08f;
+
+        Vector3 castStart = worldPoint + worldNormal * surfaceOffset;
+        Vector3 castDirection = -worldNormal;
+
+        if (Physics.Raycast(castStart, castDirection, out RaycastHit hit, checkDistance))
+            return hit.collider != null && hit.collider.gameObject != sourceObject;
+
+        return false;
+    }
+
+    private bool IsFloodEdgeBlocked(
+        int[] triangles,
+        Vector3[] vertices,
+        int fromTriangle,
+        int toTriangle)
+    {
+        int fromStart = fromTriangle * 3;
+        int toStart = toTriangle * 3;
+
+        int sharedA = -1;
+        int sharedB = -1;
+
+        for (int i = 0; i < 3; i++)
+        {
+            int fromIndex = triangles[fromStart + i];
+            for (int j = 0; j < 3; j++)
+            {
+                int toIndex = triangles[toStart + j];
+                if (fromIndex != toIndex)
+                    continue;
+
+                if (sharedA == -1)
+                    sharedA = fromIndex;
+                else if (sharedB == -1)
+                    sharedB = fromIndex;
+            }
+        }
+
+        if (sharedA == -1 || sharedB == -1)
+            return false;
+
+        Vector3 worldA = sourceObject.transform.TransformPoint(vertices[sharedA]);
+        Vector3 worldB = sourceObject.transform.TransformPoint(vertices[sharedB]);
+        Vector3 edgeMid = (worldA + worldB) * 0.5f;
+
+        Vector3 fromCenter = sourceObject.transform.TransformPoint(GetTriangleCenter(triangles, vertices, fromTriangle));
+        Vector3 toCenter = sourceObject.transform.TransformPoint(GetTriangleCenter(triangles, vertices, toTriangle));
+        Vector3 across = toCenter - fromCenter;
+        if (across.sqrMagnitude < 0.0001f)
+            return false;
+
+        across.Normalize();
+
+        const float sideOffset = 0.03f;
+        const float castHeight = 0.2f;
+        float castDistance = Vector3.Distance(fromCenter, toCenter);
+
+        Vector3 castStart = edgeMid - across * sideOffset + Vector3.up * castHeight;
+        Quaternion castRotation = Quaternion.LookRotation(across, Vector3.up);
+        Vector3 halfExtents = new Vector3(0.02f, castHeight, 0.02f);
+
+        if (Physics.BoxCast(castStart, halfExtents, across, out RaycastHit hit, castRotation, castDistance))
+            return hit.collider != null && hit.collider.gameObject != sourceObject;
+
+        return false;
+    }
+
+    private List<int> FilterTrianglesInsideBlockingGeometry(
+        List<int> selectedTriangles,
+        int[] triangles,
+        Vector3[] vertices,
+        Vector3[] faceNormals)
+    {
+        List<int> filtered = new List<int>(selectedTriangles.Count);
+        int triangleCount = triangles.Length / 3;
+
+        for (int i = 0; i < selectedTriangles.Count; i++)
+        {
+            int triangleIndex = selectedTriangles[i];
+            if (triangleIndex < 0 || triangleIndex >= triangleCount)
+                continue;
+
+            if (!IsTriangleInsideBlockingGeometry(triangleIndex, triangles, vertices, faceNormals))
+                filtered.Add(triangleIndex);
+        }
+
+        return filtered;
+    }
+
+    private bool IsTriangleInsideBlockingGeometry(
+        int triangleIndex,
+        int[] triangles,
+        Vector3[] vertices,
+        Vector3[] faceNormals)
+    {
+        int triangleCount = triangles.Length / 3;
+        if (triangleIndex < 0 || triangleIndex >= triangleCount)
+            return true;
+
+        int start = triangleIndex * 3;
+        if (start < 0 || start + 2 >= triangles.Length)
+            return true;
+
+        int indexA = triangles[start];
+        int indexB = triangles[start + 1];
+        int indexC = triangles[start + 2];
+
+        if (indexA < 0 || indexA >= vertices.Length ||
+            indexB < 0 || indexB >= vertices.Length ||
+            indexC < 0 || indexC >= vertices.Length ||
+            faceNormals == null || triangleIndex >= faceNormals.Length)
+            return true;
+
+        Vector3 a = sourceObject.transform.TransformPoint(vertices[indexA]);
+        Vector3 b = sourceObject.transform.TransformPoint(vertices[indexB]);
+        Vector3 c = sourceObject.transform.TransformPoint(vertices[indexC]);
+
+        Vector3 center = (a + b + c) / 3f;
+        Vector3 normal = sourceObject.transform.TransformDirection(faceNormals[triangleIndex]).normalized;
+        if (normal.sqrMagnitude < 0.0001f)
+            normal = Vector3.up;
+
+        const float sampleInset = 0.02f;
+        const float halfHeight = 0.1f;
+        Vector3 halfExtents = new Vector3(sampleInset, halfHeight, sampleInset);
+
+        Vector3[] samples =
+        {
+            center,
+            Vector3.Lerp(a, center, 0.5f),
+            Vector3.Lerp(b, center, 0.5f),
+            Vector3.Lerp(c, center, 0.5f)
+        };
+
+        for (int i = 0; i < samples.Length; i++)
+        {
+            Collider[] overlaps = Physics.OverlapBox(
+                samples[i],
+                halfExtents,
+                Quaternion.identity,
+                ~0,
+                QueryTriggerInteraction.Ignore);
+
+            for (int j = 0; j < overlaps.Length; j++)
+            {
+                Collider overlap = overlaps[j];
+                if (overlap == null || overlap.gameObject == sourceObject)
+                    continue;
+
+                Vector3 closest = overlap.ClosestPoint(samples[i]);
+                if ((closest - samples[i]).sqrMagnitude < 0.0001f)
+                    return true;
+            }
+        }
+
+        return false;
     }
 }

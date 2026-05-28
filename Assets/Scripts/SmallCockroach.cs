@@ -16,7 +16,9 @@ public class SmallCockroach : MonoBehaviour
     [SerializeField] private float stuckTimeout = 0.75f;
     [SerializeField] private float stuckVelocityThreshold = 0.02f;
     [SerializeField] private bool stopOnGoal = true;
-
+    [SerializeField] private bool ignoreCockroaches = false;
+    [SerializeField] [Range(0f, 1f)] private float crossLinkBias = 0.6f;
+    [SerializeField] private Animator animatorOverride;
     public bool hasStartedMoving = true;
 
     public float MinRandomScale = 0.5f;
@@ -38,7 +40,7 @@ public class SmallCockroach : MonoBehaviour
     void Start()
     {
         agent = GetComponent<NavMeshAgent>();
-        animator = GetComponent<Animator>();
+        animator = animatorOverride != null ? animatorOverride : GetComponent<Animator>();
 
         baseAgentRadius = agent.radius;
         baseAgentHeight = agent.height;
@@ -152,8 +154,16 @@ public class SmallCockroach : MonoBehaviour
 
     private void ConfigureAgentAvoidance()
     {
-        agent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
-        agent.avoidancePriority = Random.Range(20, 80);
+        if (ignoreCockroaches)
+        {
+            agent.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+            agent.avoidancePriority = 0;
+        }
+        else
+        {
+            agent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
+            agent.avoidancePriority = Random.Range(20, 80);
+        }
     }
 
     private void UpdateStuckTimer(bool wantsToMove, bool isMoving)
@@ -269,34 +279,35 @@ public class SmallCockroach : MonoBehaviour
         float minSeparation = Mathf.Max(agent.radius * 0.5f, 0.05f);
         float minSeparationSqr = minSeparation * minSeparation;
 
-        // First pass: try local short-range candidates.
-        for (int attempt = 0; attempt < randomPointAttempts; attempt++)
+        // Only attempt local short-range candidates when the random roll misses the cross-link bias.
+        if (Random.value >= crossLinkBias)
         {
-            float radius = Random.Range(minRandomMoveRadius, maxRandomMoveRadius);
-            float angle = Random.Range(0f, Mathf.PI * 2f);
+            for (int attempt = 0; attempt < randomPointAttempts; attempt++)
+            {
+                float radius = Random.Range(minRandomMoveRadius, maxRandomMoveRadius);
+                float angle = Random.Range(0f, Mathf.PI * 2f);
 
-            Vector3 offset = (tangent * Mathf.Cos(angle) + bitangent * Mathf.Sin(angle)) * radius;
-            Vector3 candidate = currentHit.position + offset;
+                Vector3 offset = (tangent * Mathf.Cos(angle) + bitangent * Mathf.Sin(angle)) * radius;
+                Vector3 candidate = currentHit.position + offset;
 
-            if (!NavMesh.SamplePosition(candidate, out NavMeshHit hit, randomPointSampleRadius, NavMesh.AllAreas))
-                continue;
+                if (!NavMesh.SamplePosition(candidate, out NavMeshHit hit, randomPointSampleRadius, NavMesh.AllAreas))
+                    continue;
 
-            if ((hit.position - currentHit.position).sqrMagnitude < minSeparationSqr)
-                continue;
+                if ((hit.position - currentHit.position).sqrMagnitude < minSeparationSqr)
+                    continue;
 
-            NavMeshPath path = new NavMeshPath();
-            agent.CalculatePath(hit.position, path);
+                NavMeshPath path = new NavMeshPath();
+                agent.CalculatePath(hit.position, path);
 
-            // Accept complete OR partial — partial means the path crosses a link boundary.
-            if (path.status == NavMeshPathStatus.PathInvalid)
-                continue;
+                if (path.status == NavMeshPathStatus.PathInvalid)
+                    continue;
 
-            destination = hit.position;
-            return true;
+                destination = hit.position;
+                return true;
+            }
         }
 
-        // Second pass: try a random reachable point from the full baked NavMesh triangulation,
-        // which includes all patch surfaces, so the roach can escape to other patches.
+        // Cross-surface pass: pick a random point from the full baked NavMesh triangulation.
         if (triangulation.vertices != null && triangulation.vertices.Length > 0 &&
             triangulation.indices != null && triangulation.indices.Length >= 3)
         {
