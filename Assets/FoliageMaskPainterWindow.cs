@@ -93,8 +93,11 @@ public sealed class FoliageMaskPainterWindow : EditorWindow
 
     private void OnEnable()
     {
-        SceneView.duringSceneGui -= OnSceneGUI;
-        SceneView.duringSceneGui += OnSceneGUI;
+        if (toolEnabled)
+        {
+            SceneView.duringSceneGui -= OnSceneGUI;
+            SceneView.duringSceneGui += OnSceneGUI;
+        }
         TryAssignFromSelection();
     }
 
@@ -103,13 +106,9 @@ public sealed class FoliageMaskPainterWindow : EditorWindow
         SceneView.duringSceneGui -= OnSceneGUI;
 
         if (strokeDirty)
-        {
             SaveWorkingTexturesIfNeeded();
-        }
         else
-        {
             CancelStrokePreview();
-        }
     }
 
     private void OnSelectionChange()
@@ -124,7 +123,24 @@ public sealed class FoliageMaskPainterWindow : EditorWindow
         {
             scrollPosition = scrollView.scrollPosition;
 
-            toolEnabled = EditorGUILayout.Toggle("Tool Enabled", toolEnabled);
+            bool newToolEnabled = EditorGUILayout.Toggle("Tool Enabled", toolEnabled);
+            if (newToolEnabled != toolEnabled)
+            {
+                toolEnabled = newToolEnabled;
+                if (toolEnabled)
+                {
+                    SceneView.duringSceneGui -= OnSceneGUI;
+                    SceneView.duringSceneGui += OnSceneGUI;
+                }
+                else
+                {
+                    SceneView.duringSceneGui -= OnSceneGUI;
+                    isPainting = false;
+                    hasLastPaintPoint = false;
+                    if (GUIUtility.hotControl != 0)
+                        GUIUtility.hotControl = 0;
+                }
+            }
 
             EditorGUILayout.LabelField("Target", EditorStyles.boldLabel);
 
@@ -328,7 +344,13 @@ public sealed class FoliageMaskPainterWindow : EditorWindow
         {
             Handles.color = GetBrushPreviewColor(IsErase(currentEvent));
             Handles.DrawWireDisc(hit.point, hit.normal, GetWorldBrushSize());
-            HandleUtility.AddDefaultControl(controlId);
+
+            // Only steal scene view mouse control when the user is actively
+            // painting or holding Shift to signal paint intent.
+            // Without this guard, AddDefaultControl blocks drag/orbit on every hover.
+            if (isPainting || currentEvent.shift)
+                HandleUtility.AddDefaultControl(controlId);
+
             SceneView.RepaintAll();
         }
 

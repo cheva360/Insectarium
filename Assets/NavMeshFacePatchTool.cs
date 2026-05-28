@@ -38,8 +38,11 @@ public sealed class NavMeshFacePatchTool : EditorWindow
 
     private void OnEnable()
     {
-        SceneView.duringSceneGui -= OnSceneGUI;
-        SceneView.duringSceneGui += OnSceneGUI;
+        if (toolEnabled)
+        {
+            SceneView.duringSceneGui -= OnSceneGUI;
+            SceneView.duringSceneGui += OnSceneGUI;
+        }
         TryAssignFromSelection();
     }
 
@@ -95,7 +98,22 @@ public sealed class NavMeshFacePatchTool : EditorWindow
 
     private void OnGUI()
     {
-        toolEnabled = EditorGUILayout.Toggle("Tool Enabled", toolEnabled);
+        bool newToolEnabled = EditorGUILayout.Toggle("Tool Enabled", toolEnabled);
+        if (newToolEnabled != toolEnabled)
+        {
+            toolEnabled = newToolEnabled;
+            if (toolEnabled)
+            {
+                SceneView.duringSceneGui -= OnSceneGUI;
+                SceneView.duringSceneGui += OnSceneGUI;
+            }
+            else
+            {
+                SceneView.duringSceneGui -= OnSceneGUI;
+                if (GUIUtility.hotControl != 0)
+                    GUIUtility.hotControl = 0;
+            }
+        }
 
         EditorGUILayout.LabelField("Source", EditorStyles.boldLabel);
 
@@ -188,17 +206,27 @@ public sealed class NavMeshFacePatchTool : EditorWindow
         if (!toolEnabled)
         {
             hoveredTriangleIndex = -1;
+            // Release any lingering hotControl so scene drag is never stuck.
+            if (GUIUtility.hotControl != 0)
+                GUIUtility.hotControl = 0;
             return;
         }
 
         CacheSource();
 
         if (sourceObject == null || sourceMeshCollider == null || sourceMesh == null)
+            return;
+
+        Event currentEvent = Event.current;
+
+        // Only intercept input when Shift is held — otherwise let the scene
+        // view handle all mouse events (drag to pan/orbit etc.) normally.
+        if (!currentEvent.shift)
         {
+            hoveredTriangleIndex = -1;
             return;
         }
 
-        Event currentEvent = Event.current;
         Ray ray = HandleUtility.GUIPointToWorldRay(currentEvent.mousePosition);
 
         if (!sourceMeshCollider.Raycast(ray, out RaycastHit hit, Mathf.Infinity))
@@ -211,11 +239,9 @@ public sealed class NavMeshFacePatchTool : EditorWindow
         DrawTriangleOutline(sourceMesh, sourceObject.transform.localToWorldMatrix, hoveredTriangleIndex);
 
         if (multiSelectMode)
-        {
             DrawQueuedTriangleOutlines(sourceMesh, sourceObject.transform.localToWorldMatrix, pendingSelectedTriangles);
-        }
 
-        if (currentEvent.type == EventType.MouseDown && currentEvent.button == 0 && currentEvent.shift)
+        if (currentEvent.type == EventType.MouseDown && currentEvent.button == 0)
         {
             List<int> clickedTriangles = useFloodFill
                 ? FloodFillTriangles(
@@ -228,13 +254,9 @@ public sealed class NavMeshFacePatchTool : EditorWindow
                 : new List<int> { hit.triangleIndex };
 
             if (multiSelectMode)
-            {
                 AddTrianglesToPendingSelection(clickedTriangles);
-            }
             else
-            {
                 CreatePatchFromTriangles(clickedTriangles);
-            }
 
             currentEvent.Use();
         }
