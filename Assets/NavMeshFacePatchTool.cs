@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Unity.AI.Navigation;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.Rendering;
 
 public sealed class NavMeshFacePatchTool : EditorWindow
@@ -17,6 +18,11 @@ public sealed class NavMeshFacePatchTool : EditorWindow
     [SerializeField] private bool multiSelectMode = false;
     [SerializeField] private int patchLayer = 0;
     [SerializeField] private bool buildNavMeshImmediately = true;
+    [SerializeField] private bool autoLinkNearbyPatches = true;
+    [SerializeField] private bool restrictLinksToCurrentSource = true;
+    [SerializeField] private float maxAutoLinkDistance = 0.5f;
+    [SerializeField] private float autoLinkWidth = 0.08f;
+    [SerializeField] private float autoLinkHeight = 0.05f;
 
     private MeshCollider sourceMeshCollider;
     private Mesh sourceMesh;
@@ -74,9 +80,16 @@ public sealed class NavMeshFacePatchTool : EditorWindow
         sourceMeshCollider = sourceObject.GetComponent<MeshCollider>();
         sourceRenderer = sourceObject.GetComponent<Renderer>();
 
-        if (sourceMeshCollider != null)
+        if (sourceMeshCollider != null && sourceMeshCollider.sharedMesh != null)
         {
             sourceMesh = sourceMeshCollider.sharedMesh;
+            return;
+        }
+
+        MeshFilter meshFilter = sourceObject.GetComponent<MeshFilter>();
+        if (meshFilter != null && meshFilter.sharedMesh != null)
+        {
+            sourceMesh = meshFilter.sharedMesh;
         }
     }
 
@@ -137,6 +150,17 @@ public sealed class NavMeshFacePatchTool : EditorWindow
         buildNavMeshImmediately = EditorGUILayout.Toggle("Build Immediately", buildNavMeshImmediately);
 
         EditorGUILayout.Space();
+        EditorGUILayout.LabelField("Linking", EditorStyles.boldLabel);
+        autoLinkNearbyPatches = EditorGUILayout.Toggle("Auto Link Nearby Patches", autoLinkNearbyPatches);
+        restrictLinksToCurrentSource = EditorGUILayout.Toggle("Restrict To Current Source", restrictLinksToCurrentSource);
+        maxAutoLinkDistance = EditorGUILayout.FloatField("Max Link Distance", maxAutoLinkDistance);
+        autoLinkWidth = EditorGUILayout.FloatField("Link Width", autoLinkWidth);
+        autoLinkHeight = EditorGUILayout.FloatField("Link Height (Separation)", autoLinkHeight);
+
+        if (GUILayout.Button("Rebuild All Patch Links"))
+        {
+            RebuildAllPatchLinks();
+        }
 
         if (!toolEnabled)
         {
@@ -146,13 +170,13 @@ public sealed class NavMeshFacePatchTool : EditorWindow
 
         if (sourceObject == null)
         {
-            EditorGUILayout.HelpBox("Select a GameObject with a MeshCollider, then Shift+Left Click a face in the Scene view.", MessageType.Info);
+            EditorGUILayout.HelpBox("Select a GameObject with a valid mesh, then Shift+Left Click a face in the Scene view.", MessageType.Info);
             return;
         }
 
         if (sourceMeshCollider == null || sourceMesh == null)
         {
-            EditorGUILayout.HelpBox("The source object needs a MeshCollider with a valid shared mesh.", MessageType.Warning);
+            EditorGUILayout.HelpBox("The source object needs a valid mesh from either MeshCollider.sharedMesh or MeshFilter.sharedMesh.", MessageType.Warning);
             return;
         }
 
@@ -297,7 +321,7 @@ public sealed class NavMeshFacePatchTool : EditorWindow
         GameObject container = new GameObject($"{sourceObject.name}_NavMeshPatch");
         Undo.RegisterCreatedObjectUndo(container, "Create NavMesh Face Patch");
         container.transform.SetPositionAndRotation(patchWorldCenter, patchWorldRotation);
-        container.transform.SetParent(sourceObject.transform.parent, true);
+        container.transform.SetParent(sourceObject.transform, true);
         container.layer = patchLayer;
 
         GameObject patchObject = new GameObject("PatchMesh");
@@ -336,6 +360,11 @@ public sealed class NavMeshFacePatchTool : EditorWindow
 
         Selection.activeGameObject = container;
         EditorGUIUtility.PingObject(container);
+
+        if (autoLinkNearbyPatches)
+        {
+            RebuildAllPatchLinks();
+        }
     }
 
     private void GetPatchTransformWorld(
@@ -349,14 +378,12 @@ public sealed class NavMeshFacePatchTool : EditorWindow
         HashSet<int> uniqueVertexIndices = new HashSet<int>();
         List<Vector3> worldVertices = new List<Vector3>();
         worldCenter = Vector3.zero;
-        Vector3 worldNormal = Vector3.zero;
 
         for (int triangleListIndex = 0; triangleListIndex < selectedTriangles.Count; triangleListIndex++)
         {
             int triangleIndex = selectedTriangles[triangleListIndex];
-            worldNormal += sourceObject.transform.TransformDirection(faceNormals[triangleIndex]);
-
             int start = triangleIndex * 3;
+
             for (int i = 0; i < 3; i++)
             {
                 int vertexIndex = sourceTriangles[start + i];
@@ -378,62 +405,50 @@ public sealed class NavMeshFacePatchTool : EditorWindow
             worldCenter = sourceObject.transform.position;
         }
 
-        if (worldNormal.sqrMagnitude <= 0.0001f)
+        int anchorTriangleIndex = selectedTriangles[0];
+        float closestDistanceSqr = float.MaxValue;
+
+        for (int i = 0; i < selectedTriangles.Count; i++)
         {
-            worldNormal = sourceObject.transform.up;
-        }
-        else
-        {
-            worldNormal.Normalize();
-        }
+            int triangleIndex = selectedTriangles[i];
+            int start = triangleIndex * 3;
 
-        GetStablePlaneBasis(worldNormal, out Vector3 basisRight, out Vector3 basisForward);
+            Vector3 a = sourceObject.transform.TransformPoint(sourceVertices[sourceTriangles[start]]);
+            Vector3 b = sourceObject.transform.TransformPoint(sourceVertices[sourceTriangles[start + 1]]);
+            Vector3 c = sourceObject.transform.TransformPoint(sourceVertices[sourceTriangles[start + 2]]);
+            Vector3 triangleCenter = (a + b + c) / 3f;
 
-        float xx = 0f;
-        float xz = 0f;
-        float zz = 0f;
-
-        for (int i = 0; i < worldVertices.Count; i++)
-        {
-            Vector3 offset = Vector3.ProjectOnPlane(worldVertices[i] - worldCenter, worldNormal);
-            float x = Vector3.Dot(offset, basisRight);
-            float z = Vector3.Dot(offset, basisForward);
-
-            xx += x * x;
-            xz += x * z;
-            zz += z * z;
+            float distanceSqr = (triangleCenter - worldCenter).sqrMagnitude;
+            if (distanceSqr < closestDistanceSqr)
+            {
+                closestDistanceSqr = distanceSqr;
+                anchorTriangleIndex = triangleIndex;
+            }
         }
 
-        float angle = 0.5f * Mathf.Atan2(2f * xz, xx - zz);
-        Vector3 principalAxis = (basisRight * Mathf.Cos(angle)) + (basisForward * Mathf.Sin(angle));
-
-        if (principalAxis.sqrMagnitude <= 0.0001f)
+        Vector3 worldUp = sourceObject.transform.TransformDirection(faceNormals[anchorTriangleIndex]).normalized;
+        if (worldUp.sqrMagnitude <= 0.0001f)
         {
-            principalAxis = basisForward;
+            worldUp = sourceObject.transform.up;
         }
 
-        Vector3 referenceAxis = Vector3.ProjectOnPlane(sourceObject.transform.up, worldNormal);
-        if (referenceAxis.sqrMagnitude <= 0.0001f)
+        Vector3 worldForward = Vector3.ProjectOnPlane(sourceObject.transform.forward, worldUp);
+        if (worldForward.sqrMagnitude <= 0.0001f)
         {
-            referenceAxis = Vector3.ProjectOnPlane(sourceObject.transform.right, worldNormal);
+            worldForward = Vector3.ProjectOnPlane(sourceObject.transform.right, worldUp);
         }
-
-        if (referenceAxis.sqrMagnitude > 0.0001f && Vector3.Dot(principalAxis, referenceAxis) < 0f)
-        {
-            principalAxis = -principalAxis;
-        }
-
-        principalAxis.Normalize();
-
-        Vector3 worldRight = principalAxis;
-        Vector3 worldForward = Vector3.Cross(worldRight, worldNormal).normalized;
 
         if (worldForward.sqrMagnitude <= 0.0001f)
         {
-            worldForward = basisForward;
+            Vector3 fallbackAxis = Mathf.Abs(Vector3.Dot(worldUp, Vector3.up)) < 0.999f
+                ? Vector3.up
+                : Vector3.right;
+
+            worldForward = Vector3.Cross(fallbackAxis, worldUp);
         }
 
-        worldRotation = Quaternion.LookRotation(worldForward, worldNormal);
+        worldForward.Normalize();
+        worldRotation = Quaternion.LookRotation(worldForward, worldUp);
     }
 
     private static void GetStablePlaneBasis(Vector3 planeNormal, out Vector3 basisRight, out Vector3 basisForward)
@@ -462,15 +477,20 @@ public sealed class NavMeshFacePatchTool : EditorWindow
         Quaternion patchWorldRotation)
     {
         Vector3[] sourceVertices = source.vertices;
-        Vector2[] sourceUvs = source.uv;
+        Vector3[] sourceNormals = source.normals;
+        Vector2[] sourceUv = source.uv;
 
         Matrix4x4 worldToPatch = Matrix4x4.TRS(patchWorldCenter, patchWorldRotation, Vector3.one).inverse;
+        Quaternion patchWorldRotationInverse = Quaternion.Inverse(patchWorldRotation);
 
         Dictionary<int, int> vertexMap = new Dictionary<int, int>();
         List<Vector3> vertices = new List<Vector3>();
         List<Vector3> normals = new List<Vector3>();
         List<Vector2> uvs = new List<Vector2>();
         List<int> triangles = new List<int>();
+
+        bool hasSourceNormals = sourceNormals != null && sourceNormals.Length == sourceVertices.Length;
+        bool hasSourceUvs = sourceUv != null && sourceUv.Length == sourceVertices.Length;
 
         foreach (int triangleIndex in selectedTriangles)
         {
@@ -487,13 +507,18 @@ public sealed class NavMeshFacePatchTool : EditorWindow
 
                     Vector3 worldVertex = sourceTransform.TransformPoint(sourceVertices[sourceVertexIndex]);
                     Vector3 localVertex = worldToPatch.MultiplyPoint3x4(worldVertex);
+                    vertices.Add(localVertex);
 
-                    vertices.Add(new Vector3(localVertex.x, 0f, localVertex.z));
-                    normals.Add(Vector3.up);
-
-                    if (sourceUvs != null && sourceUvs.Length == sourceVertices.Length)
+                    if (hasSourceNormals)
                     {
-                        uvs.Add(sourceUvs[sourceVertexIndex]);
+                        Vector3 worldNormal = sourceTransform.TransformDirection(sourceNormals[sourceVertexIndex]).normalized;
+                        Vector3 localNormal = (patchWorldRotationInverse * worldNormal).normalized;
+                        normals.Add(localNormal);
+                    }
+
+                    if (hasSourceUvs)
+                    {
+                        uvs.Add(sourceUv[sourceVertexIndex]);
                     }
                 }
 
@@ -513,15 +538,228 @@ public sealed class NavMeshFacePatchTool : EditorWindow
 
         mesh.SetVertices(vertices);
         mesh.SetTriangles(triangles, 0);
-        mesh.SetNormals(normals);
 
-        if (uvs.Count == vertices.Count)
+        if (hasSourceNormals && normals.Count == vertices.Count)
+        {
+            mesh.SetNormals(normals);
+        }
+        else
+        {
+            mesh.RecalculateNormals();
+        }
+
+        if (hasSourceUvs && uvs.Count == vertices.Count)
         {
             mesh.SetUVs(0, uvs);
         }
 
         mesh.RecalculateBounds();
         return mesh;
+    }
+
+    private static Dictionary<int, Vector2> BuildProjectedPatchPositions(
+        int[] sourceTriangles,
+        List<int> selectedTriangles,
+        Vector3[] sourceVertices,
+        Transform sourceTransform,
+        Matrix4x4 worldToPatch)
+    {
+        Dictionary<int, Vector2> projectedPositions = new Dictionary<int, Vector2>();
+
+        for (int i = 0; i < selectedTriangles.Count; i++)
+        {
+            int start = selectedTriangles[i] * 3;
+
+            for (int j = 0; j < 3; j++)
+            {
+                int sourceVertexIndex = sourceTriangles[start + j];
+                if (projectedPositions.ContainsKey(sourceVertexIndex))
+                {
+                    continue;
+                }
+
+                Vector3 worldVertex = sourceTransform.TransformPoint(sourceVertices[sourceVertexIndex]);
+                Vector3 localVertex = worldToPatch.MultiplyPoint3x4(worldVertex);
+                projectedPositions.Add(sourceVertexIndex, new Vector2(localVertex.x, localVertex.z));
+            }
+        }
+
+        return projectedPositions;
+    }
+
+    private static Dictionary<int, Vector2> BuildUnwrappedPatchPositions(
+        int[] sourceTriangles,
+        List<int> selectedTriangles,
+        Vector3[] sourceVertices,
+        Transform sourceTransform,
+        Dictionary<int, Vector2> projectedPositions)
+    {
+        Dictionary<int, Vector2> unwrappedPositions = new Dictionary<int, Vector2>();
+
+        if (selectedTriangles.Count == 0)
+        {
+            return unwrappedPositions;
+        }
+
+        GetTriangleVertexIndices(sourceTriangles, selectedTriangles[0], out int rootA, out int rootB, out int rootC);
+        unwrappedPositions[rootA] = projectedPositions[rootA];
+        unwrappedPositions[rootB] = projectedPositions[rootB];
+        unwrappedPositions[rootC] = projectedPositions[rootC];
+
+        HashSet<int> resolvedTriangles = new HashSet<int> { selectedTriangles[0] };
+
+        bool madeProgress = true;
+        while (madeProgress)
+        {
+            madeProgress = false;
+
+            for (int i = 0; i < selectedTriangles.Count; i++)
+            {
+                int triangleIndex = selectedTriangles[i];
+                if (resolvedTriangles.Contains(triangleIndex))
+                {
+                    continue;
+                }
+
+                GetTriangleVertexIndices(sourceTriangles, triangleIndex, out int a, out int b, out int c);
+
+                bool hasA = unwrappedPositions.ContainsKey(a);
+                bool hasB = unwrappedPositions.ContainsKey(b);
+                bool hasC = unwrappedPositions.ContainsKey(c);
+
+                int placedCount = (hasA ? 1 : 0) + (hasB ? 1 : 0) + (hasC ? 1 : 0);
+
+                if (placedCount == 3)
+                {
+                    resolvedTriangles.Add(triangleIndex);
+                    madeProgress = true;
+                    continue;
+                }
+
+                if (placedCount != 2)
+                {
+                    continue;
+                }
+
+                int sharedA;
+                int sharedB;
+                int missing;
+
+                if (!hasA)
+                {
+                    sharedA = b;
+                    sharedB = c;
+                    missing = a;
+                }
+                else if (!hasB)
+                {
+                    sharedA = c;
+                    sharedB = a;
+                    missing = b;
+                }
+                else
+                {
+                    sharedA = a;
+                    sharedB = b;
+                    missing = c;
+                }
+
+                if (!TryPlaceTriangleVertex(
+                    sharedA,
+                    sharedB,
+                    missing,
+                    sourceVertices,
+                    sourceTransform,
+                    unwrappedPositions,
+                    projectedPositions,
+                    out Vector2 placedPosition))
+                {
+                    continue;
+                }
+
+                unwrappedPositions[missing] = placedPosition;
+                resolvedTriangles.Add(triangleIndex);
+                madeProgress = true;
+            }
+        }
+
+        foreach (KeyValuePair<int, Vector2> pair in projectedPositions)
+        {
+            if (!unwrappedPositions.ContainsKey(pair.Key))
+            {
+                unwrappedPositions.Add(pair.Key, pair.Value);
+            }
+        }
+
+        return unwrappedPositions;
+    }
+
+    private static bool TryPlaceTriangleVertex(
+        int sharedA,
+        int sharedB,
+        int missing,
+        Vector3[] sourceVertices,
+        Transform sourceTransform,
+        Dictionary<int, Vector2> unwrappedPositions,
+        Dictionary<int, Vector2> projectedPositions,
+        out Vector2 placedPosition)
+    {
+        placedPosition = Vector2.zero;
+
+        if (!unwrappedPositions.TryGetValue(sharedA, out Vector2 pointA) ||
+            !unwrappedPositions.TryGetValue(sharedB, out Vector2 pointB))
+        {
+            return false;
+        }
+
+        Vector3 worldA = sourceTransform.TransformPoint(sourceVertices[sharedA]);
+        Vector3 worldB = sourceTransform.TransformPoint(sourceVertices[sharedB]);
+        Vector3 worldMissing = sourceTransform.TransformPoint(sourceVertices[missing]);
+
+        float lengthAM = Vector3.Distance(worldA, worldMissing);
+        float lengthBM = Vector3.Distance(worldB, worldMissing);
+
+        Vector2 edge = pointB - pointA;
+        float edgeLength = edge.magnitude;
+
+        if (edgeLength <= 0.0001f)
+        {
+            return false;
+        }
+
+        float minReach = Mathf.Abs(lengthAM - lengthBM);
+        float maxReach = lengthAM + lengthBM;
+
+        if (edgeLength < minReach || edgeLength > maxReach)
+        {
+            return false;
+        }
+
+        Vector2 edgeDir = edge / edgeLength;
+        float alongEdge = ((lengthAM * lengthAM) - (lengthBM * lengthBM) + (edgeLength * edgeLength)) / (2f * edgeLength);
+        float heightSqr = Mathf.Max(0f, (lengthAM * lengthAM) - (alongEdge * alongEdge));
+        float height = Mathf.Sqrt(heightSqr);
+
+        Vector2 edgePerp = new Vector2(-edgeDir.y, edgeDir.x);
+        Vector2 basePoint = pointA + (edgeDir * alongEdge);
+
+        Vector2 candidateA = basePoint + (edgePerp * height);
+        Vector2 candidateB = basePoint - (edgePerp * height);
+
+        Vector2 projectedGuess = projectedPositions[missing];
+        placedPosition = (candidateA - projectedGuess).sqrMagnitude <= (candidateB - projectedGuess).sqrMagnitude
+            ? candidateA
+            : candidateB;
+
+        return true;
+    }
+
+    private static void GetTriangleVertexIndices(int[] sourceTriangles, int triangleIndex, out int a, out int b, out int c)
+    {
+        int start = triangleIndex * 3;
+        a = sourceTriangles[start];
+        b = sourceTriangles[start + 1];
+        c = sourceTriangles[start + 2];
     }
 
     private static void EnsureFolder(string folderPath)
@@ -705,6 +943,20 @@ public sealed class NavMeshFacePatchTool : EditorWindow
         connectedTriangles.Add(triangleIndex);
     }
 
+    private static void AddBoundaryEdge(Dictionary<Edge, int> edgeUseCounts, int a, int b)
+    {
+        Edge edge = new Edge(a, b);
+
+        if (edgeUseCounts.TryGetValue(edge, out int count))
+        {
+            edgeUseCounts[edge] = count + 1;
+        }
+        else
+        {
+            edgeUseCounts.Add(edge, 1);
+        }
+    }
+
     private readonly struct Edge
     {
         public readonly int A;
@@ -723,5 +975,448 @@ public sealed class NavMeshFacePatchTool : EditorWindow
                 B = a;
             }
         }
+    }
+
+    private static bool TryGetClosestPointsBetweenPatches(
+        MeshFilter sourcePatchFilter,
+        MeshFilter targetPatchFilter,
+        out Vector3 sourceWorldPoint,
+        out Vector3 targetWorldPoint,
+        out float closestDistanceSqr)
+    {
+        sourceWorldPoint = Vector3.zero;
+        targetWorldPoint = Vector3.zero;
+        closestDistanceSqr = float.MaxValue;
+
+        List<BoundarySegment> sourceSegments = GetBoundarySegments(sourcePatchFilter);
+        List<BoundarySegment> targetSegments = GetBoundarySegments(targetPatchFilter);
+
+        if (sourceSegments.Count == 0 || targetSegments.Count == 0)
+            return false;
+
+        bool found = false;
+
+        for (int i = 0; i < sourceSegments.Count; i++)
+        {
+            BoundarySegment sourceSegment = sourceSegments[i];
+
+            for (int j = 0; j < targetSegments.Count; j++)
+            {
+                BoundarySegment targetSegment = targetSegments[j];
+
+                GetClosestPointsOnSegments(
+                    sourceSegment.A, sourceSegment.B,
+                    targetSegment.A, targetSegment.B,
+                    out Vector3 sourcePoint,
+                    out Vector3 targetPoint);
+
+                float distanceSqr = (sourcePoint - targetPoint).sqrMagnitude;
+                if (distanceSqr >= closestDistanceSqr)
+                    continue;
+
+                closestDistanceSqr = distanceSqr;
+                sourceWorldPoint = sourcePoint;
+                targetWorldPoint = targetPoint;
+                found = true;
+            }
+        }
+
+        if (!found)
+            return false;
+
+        // When patches touch at a seam the two closest points are at the same
+        // world location, which produces a zero-length link. Push each endpoint
+        // slightly toward its own mesh centroid so both points land on their
+        // respective navmesh surfaces with a real gap between them.
+        const float insetDistance = 0.08f;
+
+        Vector3 sourceCentroid = sourcePatchFilter.transform.TransformPoint(
+            sourcePatchFilter.sharedMesh.bounds.center);
+        Vector3 targetCentroid = targetPatchFilter.transform.TransformPoint(
+            targetPatchFilter.sharedMesh.bounds.center);
+
+        Vector3 sourceDir = sourceCentroid - sourceWorldPoint;
+        float sourceLen = sourceDir.magnitude;
+        if (sourceLen > 0.001f)
+            sourceWorldPoint += (sourceDir / sourceLen) * Mathf.Min(insetDistance, sourceLen * 0.4f);
+
+        Vector3 targetDir = targetCentroid - targetWorldPoint;
+        float targetLen = targetDir.magnitude;
+        if (targetLen > 0.001f)
+            targetWorldPoint += (targetDir / targetLen) * Mathf.Min(insetDistance, targetLen * 0.4f);
+
+        return true;
+    }
+
+    // Returns the closest matching boundary segment pair between two patches.
+    private static bool TryGetSeamBetweenPatches(
+        MeshFilter sourcePatchFilter,
+        MeshFilter targetPatchFilter,
+        out BoundarySegment sourceSeam,
+        out BoundarySegment targetSeam,
+        out float closestDistanceSqr)
+    {
+        sourceSeam = default;
+        targetSeam = default;
+        closestDistanceSqr = float.MaxValue;
+
+        List<BoundarySegment> sourceSegments = GetBoundarySegments(sourcePatchFilter);
+        List<BoundarySegment> targetSegments = GetBoundarySegments(targetPatchFilter);
+
+        if (sourceSegments.Count == 0 || targetSegments.Count == 0)
+            return false;
+
+        bool found = false;
+
+        for (int i = 0; i < sourceSegments.Count; i++)
+        {
+            BoundarySegment src = sourceSegments[i];
+
+            for (int j = 0; j < targetSegments.Count; j++)
+            {
+                BoundarySegment tgt = targetSegments[j];
+
+                // Use midpoint-to-midpoint distance to rank candidate seam pairs.
+                Vector3 srcMid = (src.A + src.B) * 0.5f;
+                Vector3 tgtMid = (tgt.A + tgt.B) * 0.5f;
+                float distSqr = (srcMid - tgtMid).sqrMagnitude;
+
+                if (distSqr >= closestDistanceSqr)
+                    continue;
+
+                closestDistanceSqr = distSqr;
+                sourceSeam = src;
+                targetSeam = tgt;
+                found = true;
+            }
+        }
+
+        return found;
+    }
+
+    private static List<BoundarySegment> GetBoundarySegments(MeshFilter meshFilter)
+    {
+        List<BoundarySegment> segments = new List<BoundarySegment>();
+
+        if (meshFilter == null || meshFilter.sharedMesh == null)
+            return segments;
+
+        Mesh mesh = meshFilter.sharedMesh;
+        Vector3[] vertices = mesh.vertices;
+        int[] triangles = mesh.triangles;
+
+        if (vertices == null || triangles == null || triangles.Length < 3)
+            return segments;
+
+        Dictionary<Edge, int> edgeUseCounts = new Dictionary<Edge, int>();
+
+        for (int i = 0; i < triangles.Length; i += 3)
+        {
+            AddBoundaryEdge(edgeUseCounts, triangles[i], triangles[i + 1]);
+            AddBoundaryEdge(edgeUseCounts, triangles[i + 1], triangles[i + 2]);
+            AddBoundaryEdge(edgeUseCounts, triangles[i + 2], triangles[i]);
+        }
+
+        foreach (KeyValuePair<Edge, int> pair in edgeUseCounts)
+        {
+            if (pair.Value != 1)
+                continue;
+
+            Vector3 a = meshFilter.transform.TransformPoint(vertices[pair.Key.A]);
+            Vector3 b = meshFilter.transform.TransformPoint(vertices[pair.Key.B]);
+            segments.Add(new BoundarySegment(a, b));
+        }
+
+        return segments;
+    }
+
+    private static void GetClosestPointsOnSegments(
+        Vector3 p1,
+        Vector3 q1,
+        Vector3 p2,
+        Vector3 q2,
+        out Vector3 c1,
+        out Vector3 c2)
+    {
+        Vector3 d1 = q1 - p1;
+        Vector3 d2 = q2 - p2;
+        Vector3 r = p1 - p2;
+        float a = Vector3.Dot(d1, d1);
+        float e = Vector3.Dot(d2, d2);
+        float f = Vector3.Dot(d2, r);
+
+        float s;
+        float t;
+
+        if (a <= Mathf.Epsilon && e <= Mathf.Epsilon)
+        {
+            c1 = p1;
+            c2 = p2;
+            return;
+        }
+
+        if (a <= Mathf.Epsilon)
+        {
+            s = 0f;
+            t = Mathf.Clamp01(f / e);
+        }
+        else
+        {
+            float c = Vector3.Dot(d1, r);
+
+            if (e <= Mathf.Epsilon)
+            {
+                t = 0f;
+                s = Mathf.Clamp01(-c / a);
+            }
+            else
+            {
+                float b = Vector3.Dot(d1, d2);
+                float denom = a * e - b * b;
+
+                s = denom != 0f ? Mathf.Clamp01((b * f - c * e) / denom) : 0f;
+                t = (b * s + f) / e;
+
+                if (t < 0f)
+                {
+                    t = 0f;
+                    s = Mathf.Clamp01(-c / a);
+                }
+                else if (t > 1f)
+                {
+                    t = 1f;
+                    s = Mathf.Clamp01((b - c) / a);
+                }
+            }
+        }
+
+        c1 = p1 + d1 * s;
+        c2 = p2 + d2 * t;
+    }
+
+    private readonly struct BoundarySegment
+    {
+        public readonly Vector3 A;
+        public readonly Vector3 B;
+
+        public BoundarySegment(Vector3 a, Vector3 b)
+        {
+            A = a;
+            B = b;
+        }
+    }
+
+    private void RebuildAllPatchLinks()
+    {
+        GameObject linkContainer = GameObject.Find("NavMeshPatchLinks");
+        if (linkContainer != null)
+        {
+            NavMeshLink[] old = linkContainer.GetComponentsInChildren<NavMeshLink>(true);
+            for (int i = old.Length - 1; i >= 0; i--)
+            {
+                if (old[i] != null)
+                    Undo.DestroyObjectImmediate(old[i].gameObject);
+            }
+        }
+
+        linkContainer = GetOrCreateLinkContainer();
+        float maxDistanceSqr = maxAutoLinkDistance * maxAutoLinkDistance;
+
+        NavMeshSurface[] allSurfaces = Object.FindObjectsByType<NavMeshSurface>(FindObjectsSortMode.None);
+
+        for (int i = 0; i < allSurfaces.Length; i++)
+        {
+            NavMeshSurface sourceSurface = allSurfaces[i];
+            if (sourceSurface == null) continue;
+
+            if (restrictLinksToCurrentSource && !IsSurfaceFromCurrentSource(sourceSurface))
+                continue;
+
+            MeshFilter sourceFilter = sourceSurface.GetComponentInChildren<MeshFilter>();
+            if (sourceFilter == null || sourceFilter.sharedMesh == null) continue;
+
+            for (int j = i + 1; j < allSurfaces.Length; j++)
+            {
+                NavMeshSurface targetSurface = allSurfaces[j];
+                if (targetSurface == null) continue;
+
+                if (restrictLinksToCurrentSource && !IsSurfaceFromCurrentSource(targetSurface))
+                    continue;
+
+                if (sourceSurface.agentTypeID != targetSurface.agentTypeID)
+                    continue;
+
+                MeshFilter targetFilter = targetSurface.GetComponentInChildren<MeshFilter>();
+                if (targetFilter == null || targetFilter.sharedMesh == null) continue;
+
+                if (!TryGetSeamBetweenPatches(
+                    sourceFilter, targetFilter,
+                    out BoundarySegment sourceSeam,
+                    out BoundarySegment targetSeam,
+                    out float closestDistanceSqr))
+                    continue;
+
+                if (closestDistanceSqr > maxDistanceSqr)
+                    continue;
+
+                CreatePatchLink(linkContainer, sourceFilter, targetFilter, sourceSeam, targetSeam, sourceSurface.agentTypeID);
+            }
+        }
+
+        Debug.Log($"[NavMeshFacePatchTool] Rebuilt patch links. Container: {linkContainer.name}");
+    }
+
+    private static GameObject GetOrCreateLinkContainer()
+    {
+        const string linkContainerName = "NavMeshPatchLinks";
+        GameObject existing = GameObject.Find(linkContainerName);
+
+        if (existing != null)
+            return existing;
+
+        GameObject container = new GameObject(linkContainerName);
+        Undo.RegisterCreatedObjectUndo(container, "Create NavMesh Patch Link Container");
+        return container;
+    }
+
+    private void CreatePatchLink(
+        GameObject linkParent,
+        MeshFilter sourceFilter,
+        MeshFilter targetFilter,
+        BoundarySegment sourceSeam,
+        BoundarySegment targetSeam,
+        int agentTypeId)
+    {
+        // Midpoints of each seam edge.
+        Vector3 sourceMid = (sourceSeam.A + sourceSeam.B) * 0.5f;
+        Vector3 targetMid = (targetSeam.A + targetSeam.B) * 0.5f;
+
+        // Inset each midpoint toward its mesh centroid so the starting search
+        // position is already roughly on the surface interior.
+        const float inset = 0.08f;
+
+        Vector3 srcCentroid = sourceFilter.transform.TransformPoint(sourceFilter.sharedMesh.bounds.center);
+        Vector3 tgtCentroid = targetFilter.transform.TransformPoint(targetFilter.sharedMesh.bounds.center);
+
+        Vector3 srcInsetDir = srcCentroid - sourceMid;
+        if (srcInsetDir.magnitude > 0.001f)
+            sourceMid += srcInsetDir.normalized * Mathf.Min(inset, srcInsetDir.magnitude * 0.4f);
+
+        Vector3 tgtInsetDir = tgtCentroid - targetMid;
+        if (tgtInsetDir.magnitude > 0.001f)
+            targetMid += tgtInsetDir.normalized * Mathf.Min(inset, tgtInsetDir.magnitude * 0.4f);
+
+        // Separate the two candidate positions along the link axis by autoLinkHeight
+        // so the snap search starts further onto each surface.
+        if (autoLinkHeight > 0f)
+        {
+            Vector3 apart = (targetMid - sourceMid).normalized * (autoLinkHeight * 0.5f);
+            sourceMid -= apart;
+            targetMid += apart;
+        }
+
+        // Snap each position to the nearest valid navmesh point for this agent type.
+        // Use a generous search radius so the snap succeeds even with slight offsets.
+        float snapRadius = Mathf.Max(maxAutoLinkDistance, 1.0f);
+        NavMeshQueryFilter filter = new NavMeshQueryFilter
+        {
+            agentTypeID = agentTypeId,
+            areaMask = NavMesh.AllAreas
+        };
+
+        if (NavMesh.SamplePosition(sourceMid, out NavMeshHit srcHit, snapRadius, filter))
+            sourceMid = srcHit.position;
+        else
+        {
+            Debug.LogWarning($"[NavMeshFacePatchTool] Could not snap link start to navmesh near {sourceMid}. Link skipped.");
+            return;
+        }
+
+        if (NavMesh.SamplePosition(targetMid, out NavMeshHit tgtHit, snapRadius, filter))
+            targetMid = tgtHit.position;
+        else
+        {
+            Debug.LogWarning($"[NavMeshFacePatchTool] Could not snap link end to navmesh near {targetMid}. Link skipped.");
+            return;
+        }
+
+        // Width = length of the shorter seam so the link spans the full shared edge.
+        float srcLen = Vector3.Distance(sourceSeam.A, sourceSeam.B);
+        float tgtLen = Vector3.Distance(targetSeam.A, targetSeam.B);
+        float seamWidth = Mathf.Max(Mathf.Min(srcLen, tgtLen), autoLinkWidth);
+
+        // Seam direction = average of both edge directions.
+        Vector3 srcEdgeDir = (sourceSeam.B - sourceSeam.A).normalized;
+        Vector3 tgtEdgeDir = (targetSeam.B - targetSeam.A).normalized;
+        if (Vector3.Dot(srcEdgeDir, tgtEdgeDir) < 0f)
+            tgtEdgeDir = -tgtEdgeDir;
+        Vector3 seamDir = (srcEdgeDir + tgtEdgeDir).normalized;
+
+        // Link direction = snapped source → snapped target.
+        Vector3 linkDir = targetMid - sourceMid;
+        if (linkDir.sqrMagnitude < 0.000001f)
+            return;
+        linkDir = linkDir.normalized;
+
+        // Re-orthogonalise seamDir against linkDir.
+        seamDir = seamDir - Vector3.Dot(seamDir, linkDir) * linkDir;
+        if (seamDir.sqrMagnitude < 0.0001f)
+        {
+            seamDir = Mathf.Abs(Vector3.Dot(linkDir, Vector3.up)) < 0.9f ? Vector3.up : Vector3.right;
+            seamDir = seamDir - Vector3.Dot(seamDir, linkDir) * linkDir;
+        }
+        seamDir = seamDir.normalized;
+
+        Vector3 upDir = Vector3.Cross(linkDir, seamDir).normalized;
+        Quaternion linkRotation = Quaternion.LookRotation(linkDir, upDir);
+
+        GameObject linkObject = new GameObject("AutoNavMeshLink");
+        Undo.RegisterCreatedObjectUndo(linkObject, "Create NavMesh Patch Link");
+        linkObject.transform.SetParent(linkParent.transform, true);
+        linkObject.transform.position = (sourceMid + targetMid) * 0.5f;
+        linkObject.transform.rotation = linkRotation;
+        linkObject.transform.localScale = Vector3.one;
+
+        GameObject startObj = new GameObject("LinkStart");
+        Undo.RegisterCreatedObjectUndo(startObj, "Create NavMesh Link Start");
+        startObj.transform.SetParent(linkObject.transform, true);
+        startObj.transform.position = sourceMid;
+
+        GameObject endObj = new GameObject("LinkEnd");
+        Undo.RegisterCreatedObjectUndo(endObj, "Create NavMesh Link End");
+        endObj.transform.SetParent(linkObject.transform, true);
+        endObj.transform.position = targetMid;
+
+        NavMeshLink link = Undo.AddComponent<NavMeshLink>(linkObject);
+        link.startTransform = startObj.transform;
+        link.endTransform = endObj.transform;
+        link.width = seamWidth;
+        link.bidirectional = true;
+        link.autoUpdate = true;
+        link.area = 0;
+        link.agentTypeID = agentTypeId;
+    }
+
+    private static Vector3 GetMeshAverageNormal(MeshFilter meshFilter)
+    {
+        Mesh mesh = meshFilter.sharedMesh;
+        Vector3[] normals = mesh.normals;
+
+        if (normals == null || normals.Length == 0)
+            return meshFilter.transform.up;
+
+        Vector3 sum = Vector3.zero;
+        for (int i = 0; i < normals.Length; i++)
+            sum += normals[i];
+
+        return meshFilter.transform.TransformDirection(sum / normals.Length).normalized;
+    }
+
+    private bool IsSurfaceFromCurrentSource(NavMeshSurface surface)
+    {
+        if (surface == null || sourceObject == null)
+            return false;
+
+        return surface.transform.parent == sourceObject.transform;
     }
 }
