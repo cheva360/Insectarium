@@ -3,6 +3,15 @@ using UnityEngine.AI;
 
 public class SmallCockroach : MonoBehaviour
 {
+
+    //cockroach type enum
+    public enum CockroachType
+    {
+        Small,
+        Large,
+        Other
+    }
+
     [SerializeField] private Transform[] goals;
     [SerializeField] private bool useRandomMovement = false;
     [SerializeField] private bool useRandomScale = false;
@@ -17,7 +26,14 @@ public class SmallCockroach : MonoBehaviour
     [SerializeField] private float stuckVelocityThreshold = 0.02f;
     [SerializeField] private bool stopOnGoal = true;
     [SerializeField] private bool ignoreCockroaches = false;
+    [SerializeField] private CockroachType cockroachType = CockroachType.Small;
     [SerializeField] [Range(0f, 1f)] private float crossLinkBias = 0.6f;
+    [SerializeField] private float largeTypeWallMargin = 0.15f;
+    [SerializeField] private float largeBlockCheckRadius = 0.4f;
+    [SerializeField] private float largeBlockCheckDistance = 0.6f;
+    [SerializeField] private float minRandomMoveDuration = 1.5f;
+    [SerializeField] private float maxRandomMoveDuration = 4f;
+
     [SerializeField] private Animator animatorOverride;
     public bool hasStartedMoving = true;
 
@@ -36,6 +52,9 @@ public class SmallCockroach : MonoBehaviour
     private bool isTraversingLink = false;
     private bool movementFinished = false;
     private bool wasStartedMoving = false;
+    private float normalAgentRadius;
+    private float randomMoveTimer = 0f;
+
 
     void Start()
     {
@@ -51,6 +70,7 @@ public class SmallCockroach : MonoBehaviour
 
         ApplyRandomScale();
         ConfigureAgentAvoidance();
+        ApplyWallMargin();
 
         instanceGoals = goals != null ? (Transform[])goals.Clone() : new Transform[0];
         wasStartedMoving = hasStartedMoving;
@@ -98,12 +118,38 @@ public class SmallCockroach : MonoBehaviour
 
         if (isTraversingLink) return;
 
+        // Tick the random move duration timer and stop early when it expires.
+        if (useRandomMovement && randomMoveTimer > 0f)
+        {
+            randomMoveTimer -= Time.deltaTime;
+            if (randomMoveTimer <= 0f)
+            {
+                randomMoveTimer = 0f;
+                stuckTimer = 0f;
+                agent.ResetPath();
+
+                // Enter idle so the cockroach pauses before picking a new goal.
+                isIdling = true;
+                idleTimer = Random.Range(minIdleTime, maxIdleTime);
+                return;
+            }
+        }
+
         bool wantsToMove = !agent.pathPending && agent.hasPath && agent.remainingDistance > agent.stoppingDistance;
         bool isMoving = wantsToMove && agent.velocity.sqrMagnitude > stuckVelocityThreshold * stuckVelocityThreshold;
 
         UpdateStuckTimer(wantsToMove, isMoving);
 
         if (stuckTimer >= stuckTimeout)
+        {
+            stuckTimer = 0f;
+            isIdling = false;
+            agent.ResetPath();
+            movementFinished = !TrySetNextDestination();
+            return;
+        }
+
+        if (cockroachType == CockroachType.Large && IsPathBlockedByCockroach())
         {
             stuckTimer = 0f;
             isIdling = false;
@@ -144,12 +190,16 @@ public class SmallCockroach : MonoBehaviour
     private void ApplyRandomScale()
     {
         if (!useRandomScale)
+        {
+            normalAgentRadius = agent.radius;
             return;
+        }
 
         float scaleMultiplier = Random.Range(MinRandomScale, MaxRandomScale);
         transform.localScale *= scaleMultiplier;
         agent.radius = Mathf.Max(0.01f, baseAgentRadius * scaleMultiplier);
         agent.height = Mathf.Max(agent.radius, baseAgentHeight * scaleMultiplier);
+        normalAgentRadius = agent.radius;
     }
 
     private void ConfigureAgentAvoidance()
@@ -162,7 +212,47 @@ public class SmallCockroach : MonoBehaviour
         else
         {
             agent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
-            agent.avoidancePriority = Random.Range(20, 80);
+
+            switch (cockroachType)
+            {
+                case CockroachType.Small:  agent.avoidancePriority = Random.Range(10, 30); break;
+                case CockroachType.Large:  agent.avoidancePriority = Random.Range(40, 60); break;
+                case CockroachType.Other:  agent.avoidancePriority = Random.Range(70, 90); break;
+                default:                   agent.avoidancePriority = Random.Range(10, 30);  break;
+            }
+        }
+
+        AssignLayerAndIgnoreCollisions();
+    }
+
+    private void AssignLayerAndIgnoreCollisions()
+    {
+        string ownLayerName = cockroachType switch
+        {
+            CockroachType.Small => "CockroachSmall",
+            CockroachType.Large => "CockroachLarge",
+            CockroachType.Other => "CockroachOther",
+            _                   => "CockroachSmall"
+        };
+
+        int ownLayer = LayerMask.NameToLayer(ownLayerName);
+        if (ownLayer == -1)
+        {
+            Debug.LogWarning($"[SmallCockroach] Layer '{ownLayerName}' not found. Add it in Edit > Project Settings > Tags and Layers.");
+            return;
+        }
+
+        gameObject.layer = ownLayer;
+
+        // Ignore collisions against every other cockroach layer.
+        string[] allCockroachLayers = { "CockroachSmall", "CockroachLarge", "CockroachOther" };
+        foreach (string otherLayerName in allCockroachLayers)
+        {
+            if (otherLayerName == ownLayerName) continue;
+
+            int otherLayer = LayerMask.NameToLayer(otherLayerName);
+            if (otherLayer != -1)
+                Physics.IgnoreLayerCollision(ownLayer, otherLayer, true);
         }
     }
 
@@ -179,12 +269,13 @@ public class SmallCockroach : MonoBehaviour
 
     private System.Collections.IEnumerator TraverseLink()
     {
+        RemoveWallMargin();
+
         OffMeshLinkData linkData = agent.currentOffMeshLinkData;
 
         Vector3 startPos = agent.transform.position;
         Vector3 endPos = linkData.endPos;
 
-        // Disable avoidance so other agents can't push this one off course.
         ObstacleAvoidanceType savedAvoidance = agent.obstacleAvoidanceType;
         agent.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
 
@@ -192,17 +283,22 @@ public class SmallCockroach : MonoBehaviour
         float duration = Mathf.Max(distance / agent.speed, 0.05f);
         float elapsed = 0f;
 
-        // Fixed travel direction for the whole crossing.
         Vector3 travelDir = (endPos - startPos);
         if (travelDir.sqrMagnitude < 0.0001f)
             travelDir = transform.forward;
         travelDir = travelDir.normalized;
 
-        Vector3 surfaceRight = Vector3.Cross(travelDir, transform.up).normalized;
+        // Compute the base facing rotation from the travel direction (flat, like the original).
+        Vector3 surfaceRight = Vector3.Cross(travelDir, Vector3.up).normalized;
         if (surfaceRight.sqrMagnitude < 0.01f)
             surfaceRight = Vector3.Cross(travelDir, Vector3.forward).normalized;
         Vector3 surfaceUp = Vector3.Cross(surfaceRight, travelDir).normalized;
-        Quaternion targetRot = Quaternion.LookRotation(travelDir, surfaceUp);
+        Quaternion baseRot = Quaternion.LookRotation(travelDir, surfaceUp);
+
+        // Compute surface tilt corrections at start and end via raycast.
+        // This is only meaningful for large cockroaches on walls/ceilings.
+        Quaternion startTilt = GetSurfaceTiltCorrection(startPos);
+        Quaternion endTilt   = GetSurfaceTiltCorrection(endPos);
 
         while (elapsed < duration)
         {
@@ -210,26 +306,52 @@ public class SmallCockroach : MonoBehaviour
             float t = Mathf.Clamp01(elapsed / duration);
 
             Vector3 pos = Vector3.Lerp(startPos, endPos, t);
-
-            // Drive agent position via nextPosition — no steering, link state preserved.
             agent.nextPosition = pos;
             transform.position = pos;
+
+            // Slerp the tilt correction from start to end, apply on top of the base facing.
+            Quaternion tiltCorrection = Quaternion.Slerp(startTilt, endTilt, t);
+            Quaternion targetRot = tiltCorrection * baseRot;
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, t);
 
-            if (animator != null)
-                animator.SetBool("isMoving", true);
+            SetAnimatorBool("isMoving", true);
 
             yield return null;
         }
 
         agent.nextPosition = endPos;
         transform.position = endPos;
-        transform.rotation = targetRot;
+        transform.rotation = endTilt * baseRot;
 
         agent.obstacleAvoidanceType = savedAvoidance;
         agent.CompleteOffMeshLink();
         isTraversingLink = false;
         stuckTimer = 0f;
+
+        ApplyWallMargin();
+    }
+
+    /// <summary>
+    /// Raycasts downward from the position to find the surface normal,
+    /// then returns the rotation needed to tilt from Vector3.up to that normal.
+    /// Returns identity (no tilt) if nothing is hit.
+    /// </summary>
+    private Quaternion GetSurfaceTiltCorrection(Vector3 position)
+    {
+        float castDist = agent.height * 2f;
+
+        // Cast from slightly above in the current up direction.
+        Vector3 origin = position + transform.up * (agent.height * 0.5f);
+        if (Physics.Raycast(origin, -transform.up, out RaycastHit hit, castDist,
+                Physics.AllLayers, QueryTriggerInteraction.Ignore))
+            return Quaternion.FromToRotation(Vector3.up, hit.normal);
+
+        // Fallback: straight down for flat floors.
+        if (Physics.Raycast(position + Vector3.up * 0.1f, Vector3.down, out hit, castDist,
+                Physics.AllLayers, QueryTriggerInteraction.Ignore))
+            return Quaternion.FromToRotation(Vector3.up, hit.normal);
+
+        return Quaternion.identity;
     }
 
     private void HandleRotation()
@@ -245,7 +367,12 @@ public class SmallCockroach : MonoBehaviour
         if (useRandomMovement)
         {
             if (TryGetRandomNavMeshDestination(out Vector3 destination))
-                return agent.SetDestination(destination);
+            {
+                bool set = agent.SetDestination(destination);
+                if (set)
+                    randomMoveTimer = Random.Range(minRandomMoveDuration, maxRandomMoveDuration);
+                return set;
+            }
 
             return false;
         }
@@ -435,5 +562,51 @@ public class SmallCockroach : MonoBehaviour
         float vInside = vb * denom;
         float wInside = vc * denom;
         return a + ab * vInside + ac * wInside;
+    }
+
+    private void SetAnimatorBool(string paramName, bool value)
+    {
+        if (animator == null) return;
+
+        foreach (AnimatorControllerParameter p in animator.parameters)
+        {
+            if (p.name == paramName && p.type == AnimatorControllerParameterType.Bool)
+            {
+                animator.SetBool(paramName, value);
+                return;
+            }
+        }
+    }
+
+    private void ApplyWallMargin()
+    {
+        if (cockroachType != CockroachType.Large) return;
+        agent.radius = normalAgentRadius + largeTypeWallMargin;
+    }
+
+    private void RemoveWallMargin()
+    {
+        if (cockroachType != CockroachType.Large) return;
+        agent.radius = normalAgentRadius;
+    }
+
+    private bool IsPathBlockedByCockroach()
+    {
+        if (!agent.hasPath || agent.pathPending) return false;
+
+        // Only check when actively trying to move.
+        Vector3 velocity = agent.desiredVelocity;
+        if (velocity.sqrMagnitude < stuckVelocityThreshold * stuckVelocityThreshold) return false;
+
+        Vector3 origin = transform.position;
+        Vector3 direction = velocity.normalized;
+
+        // SphereCast ahead along the desired velocity direction.
+        if (!Physics.SphereCast(origin, largeBlockCheckRadius, direction, out RaycastHit hit,
+                largeBlockCheckDistance, Physics.AllLayers, QueryTriggerInteraction.Ignore))
+            return false;
+
+        // Only yield to another SmallCockroach, not walls or other objects.
+        return hit.collider.GetComponent<SmallCockroach>() != null;
     }
 }
