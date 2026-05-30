@@ -93,30 +93,30 @@ MonoBehaviour:
   active: 1
   distance:
     m_OverrideState: 1
-    m_Value: 512
+    m_Value: 27
   baseHeight:
-    m_OverrideState: 1
-    m_Value: 2270.9
-  maximumHeight:
-    m_OverrideState: 1
-    m_Value: 2270.9
-  enableGround:
     m_OverrideState: 0
     m_Value: 0
-  groundHeight:
+  maximumHeight:
+    m_OverrideState: 0
+    m_Value: 50
+  enableGround:
     m_OverrideState: 1
+    m_Value: 0
+  groundHeight:
+    m_OverrideState: 0
     m_Value: 0
   density:
     m_OverrideState: 1
-    m_Value: 0.1
+    m_Value: 0.05
   attenuationDistance:
-    m_OverrideState: 1
-    m_Value: 36780.8
-  enableAPVContribution:
     m_OverrideState: 0
-    m_Value: 1
-  APVContributionWeight:
+    m_Value: 128
+  enableAPVContribution:
     m_OverrideState: 1
+    m_Value: 0
+  APVContributionWeight:
+    m_OverrideState: 0
     m_Value: 1
   enableMainLightContribution:
     m_OverrideState: 1
