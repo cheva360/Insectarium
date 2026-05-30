@@ -112,7 +112,7 @@ Material:
     - _Smoothness: 0.5
     - _SmoothnessSource: 0
     - _SmoothnessTextureChannel: 0
-    - _SnapIntensity: 0.0001
+    - _SnapIntensity: 0.015
     - _SpecSource: 0
     - _SpecularExponent: 80
     - _SpecularHighlights: 1
