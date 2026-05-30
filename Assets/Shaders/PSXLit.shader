@@ -20,10 +20,16 @@ Shader "Custom/PSXLit"
 
     SubShader
     {
-        Tags { "RenderType" = "Transparent" "RenderPipeline" = "UniversalPipeline" }
+        Tags { "RenderType"="Opaque" "RenderPipeline"="UniversalPipeline" "Queue"="Geometry" }
 
         Pass
         {
+            Name "ForwardLit"
+            Tags { "LightMode"="UniversalForward" }
+            Cull Back
+            ZWrite On
+            ZTest LEqual
+
             HLSLPROGRAM
 
             #pragma vertex vert
@@ -51,7 +57,7 @@ Shader "Custom/PSXLit"
                 float4 positionHCS : SV_POSITION;
                 float3 positionWS : TEXCOORD0;
                 float2 uv : TEXCOORD1;
-                half4 color: COLOR0;
+                half4 color : COLOR0;
                 float4 shadowCoords : TEXCOORD2;
                 float3 normal : NORMAL;
             };
@@ -64,42 +70,38 @@ Shader "Custom/PSXLit"
 
             CBUFFER_START(UnityPerMaterial)
                 half4 _BaseColor;
-            
                 float _Tiled;
                 float _TexScale;
                 float4 _BaseMap_ST;
-            
                 half4 _EmissionColor;
                 float4 _EmissionMap_ST;
-            
                 float _SnapIntensity;
                 float _AffineOn;
-            
                 half4 _DiffuseColor;
                 float _SpecularExponent;
                 float4 _k;
             CBUFFER_END
 
-            float2 snapToGrid(float2 value, float snapValue) {
+            float2 snapToGrid(float2 value, float snapValue)
+            {
                 return floor(value / snapValue + 0.5) * snapValue;
             }
             
             float3 LightingFunc(float3 normalWS, Light light, half3 n, float shadow)
             {
-                half3 l = normalize(light.direction);          // Light direction in world space
-                half3 r = 2.0 * dot(n, l) * n - l;                      // Reflection vector
-                half3 v = normalize(_WorldSpaceCameraPos - normalWS);   // View direction
+                half3 l = normalize(light.direction);
+                half3 r = 2.0 * dot(n, l) * n - l;
+                half3 v = normalize(_WorldSpaceCameraPos - normalWS);
 
-                float Ia = _k.x;                                        // Ambient intensity
-                float Id = _k.y * saturate(dot(n, l) * shadow);                  // Diffuse intensity using Lambert's law
-                float Is = _k.z * pow(saturate(dot(r, v)), _SpecularExponent); // Specular intensity
+                float Ia = _k.x;
+                float Id = _k.y * saturate(dot(n, l) * shadow);
+                float Is = _k.z * pow(saturate(dot(r, v)), _SpecularExponent);
 
-                float3 ambient = Ia * _DiffuseColor.rgb;               // Ambient lighting
-                float3 diffuse = Id * _DiffuseColor.rgb * light.color; // Diffuse lighting
-                float3 specular = Is * light.color;                // Specular lighting
+                float3 ambient  = Ia * _DiffuseColor.rgb;
+                float3 diffuse  = Id * _DiffuseColor.rgb * light.color;
+                float3 specular = Is * light.color;
 
-                float3 finalColor = ambient + diffuse + specular;       // Combine all lighting components
-                return finalColor;
+                return ambient + diffuse + specular;
             }
             
             half3 LotusLambert(half3 lightColor, half3 lightDir, half3 normal, float shadow)
@@ -110,14 +112,13 @@ Shader "Custom/PSXLit"
             
             Varyings vert(Attributes IN)
             {
-                 Varyings OUT;
+                Varyings OUT;
 
                 float4 worldPosition = mul(UNITY_MATRIX_MV, IN.positionOS);
-                //float4 worldPosition = float4(TransformObjectToWorldNormal(IN.normal), 1.0);
-                
+
                 OUT.positionHCS = TransformObjectToHClip(IN.positionOS.xyz);
                 OUT.positionWS = TransformObjectToWorld(IN.positionOS.xyz);
-               
+
                 // vert snapping
                 float2 screenPos = OUT.positionHCS.xy / OUT.positionHCS.w;
                 screenPos = snapToGrid(screenPos, _SnapIntensity);
@@ -127,38 +128,32 @@ Shader "Custom/PSXLit"
                 OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
                 if (_AffineOn)
                     OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap) * OUT.positionHCS.w;
-                
-                // gourraud (vertex) shading
+
+                // gouraud (vertex) shading
                 Light light = GetMainLight();
-                half3 n = TransformObjectToWorldNormal(IN.normal);         // Convert normal to world space
-                
+                half3 n = TransformObjectToWorldNormal(IN.normal);
+
                 VertexPositionInputs vertexInput = GetVertexPositionInputs(IN.positionOS.xyz);
                 VertexNormalInputs normalInput = GetVertexNormalInputs(IN.normal, IN.tangentOS);
 
                 float shadow_amt = MainLightRealtimeShadow(GetShadowCoord(vertexInput));
                 OUT.color = half4(LightingFunc(worldPosition, light, n, shadow_amt), 1.0);
-                
-                
+
                 // additional lights
                 uint lightsCount = GetAdditionalLightsCount();
-                
+
                 LIGHT_LOOP_BEGIN(lightsCount)
-                    Light light = GetAdditionalLight(lightIndex, vertexInput.positionWS);
-                
-                    shadow_amt = AdditionalLightRealtimeShadow(lightIndex, vertexInput.positionWS, light.direction);
+                    Light additionalLight = GetAdditionalLight(lightIndex, vertexInput.positionWS);
+                    shadow_amt = AdditionalLightRealtimeShadow(lightIndex, vertexInput.positionWS, additionalLight.direction);
                     {
-                        half3 lightColor = light.color * light.distanceAttenuation;
-                        OUT.color += half4(LotusLambert(lightColor, light.direction, normalInput.normalWS, shadow_amt), 1.0);
+                        half3 lightColor = additionalLight.color * additionalLight.distanceAttenuation;
+                        OUT.color += half4(LotusLambert(lightColor, additionalLight.direction, normalInput.normalWS, shadow_amt), 1.0);
                     }
-                
                 LIGHT_LOOP_END
-                
-                // shadows
-                float4 shadowCoordinates = GetShadowCoord(vertexInput);
-                OUT.shadowCoords = shadowCoordinates;
-                
+
+                OUT.shadowCoords = GetShadowCoord(vertexInput);
                 OUT.normal = IN.normal;
-                
+
                 return OUT;
             }
 
@@ -184,17 +179,142 @@ Shader "Custom/PSXLit"
                         Node_Y = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv.xz / IN.positionHCS.w);
                         Node_Z = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv.xy / IN.positionHCS.w);
                     }
-                    
+
                     return Node_X * Node_Blend.x + Node_Y * Node_Blend.y + Node_Z * Node_Blend.z;
                 }
                     
                 half4 emission_col = SAMPLE_TEXTURE2D(_EmissionMap, sampler_EmissionMap, IN.uv) * _EmissionColor;
                 color += emission_col;
-                
+
                 return color;
             }
             ENDHLSL
         }
-        UsePass "Legacy Shaders/VertexLit/SHADOWCASTER"
+
+        Pass
+        {
+            Name "DepthOnly"
+            Tags { "LightMode"="DepthOnly" }
+            ColorMask 0
+            ZWrite On
+            ZTest LEqual
+            Cull Back
+
+            HLSLPROGRAM
+            #pragma target 3.0
+            #pragma vertex DepthVert
+            #pragma fragment DepthFrag
+
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+
+            struct DepthAttributes { float4 positionOS : POSITION; };
+            struct DepthVaryings  { float4 positionHCS : SV_POSITION; };
+
+            DepthVaryings DepthVert(DepthAttributes IN)
+            {
+                DepthVaryings OUT;
+                OUT.positionHCS = TransformObjectToHClip(IN.positionOS.xyz);
+                return OUT;
+            }
+
+            half4 DepthFrag(DepthVaryings IN) : SV_Target { return 0; }
+            ENDHLSL
+        }
+
+        Pass
+        {
+            Name "ShadowCaster"
+            Tags { "LightMode"="ShadowCaster" }
+            ColorMask 0
+            ZWrite On
+            ZTest LEqual
+            Cull Back
+
+            HLSLPROGRAM
+            #pragma target 3.0
+            #pragma vertex ShadowVert
+            #pragma fragment ShadowFrag
+            #pragma multi_compile_shadowcaster
+
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
+
+            struct ShadowAttributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; };
+            struct ShadowVaryings  { float4 positionHCS : SV_POSITION; };
+
+            ShadowVaryings ShadowVert(ShadowAttributes IN)
+            {
+                ShadowVaryings OUT;
+                float3 posWS = TransformObjectToWorld(IN.positionOS.xyz);
+                float3 normalWS = TransformObjectToWorldNormal(IN.normalOS);
+                float4 posCS = TransformWorldToHClip(ApplyShadowBias(posWS, normalWS, _MainLightPosition.xyz));
+                #if UNITY_REVERSED_Z
+                    posCS.z = min(posCS.z, posCS.w * UNITY_NEAR_CLIP_VALUE);
+                #else
+                    posCS.z = max(posCS.z, posCS.w * UNITY_NEAR_CLIP_VALUE);
+                #endif
+                OUT.positionHCS = posCS;
+                return OUT;
+            }
+
+            half4 ShadowFrag(ShadowVaryings IN) : SV_Target { return 0; }
+            ENDHLSL
+        }
+
+        Pass
+        {
+            Name "DepthNormals"
+            Tags { "LightMode"="DepthNormals" }
+            ZWrite On
+            ZTest LEqual
+            Cull Back
+
+            HLSLPROGRAM
+            #pragma target 3.0
+            #pragma vertex DepthNormalsVert
+            #pragma fragment DepthNormalsFrag
+
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+
+            CBUFFER_START(UnityPerMaterial)
+                float _SnapIntensity;
+            CBUFFER_END
+
+            struct DNAttributes
+            {
+                float4 positionOS : POSITION;
+                float3 normalOS   : NORMAL;
+            };
+
+            struct DNVaryings
+            {
+                float4 positionHCS : SV_POSITION;
+                float3 normalWS    : TEXCOORD0;
+            };
+
+            float2 snapToGrid(float2 value, float snapValue)
+            {
+                return floor(value / snapValue + 0.5) * snapValue;
+            }
+
+            DNVaryings DepthNormalsVert(DNAttributes IN)
+            {
+                DNVaryings OUT;
+                OUT.positionHCS = TransformObjectToHClip(IN.positionOS.xyz);
+
+                float2 screenPos = OUT.positionHCS.xy / OUT.positionHCS.w;
+                screenPos = snapToGrid(screenPos, _SnapIntensity);
+                OUT.positionHCS.xy = screenPos * OUT.positionHCS.w;
+
+                OUT.normalWS = TransformObjectToWorldNormal(IN.normalOS);
+                return OUT;
+            }
+
+            float4 DepthNormalsFrag(DNVaryings IN) : SV_Target
+            {
+                return float4(normalize(IN.normalWS) * 0.5 + 0.5, 0.0);
+            }
+            ENDHLSL
+        }
     }
 }
