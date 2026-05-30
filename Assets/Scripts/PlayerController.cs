@@ -52,6 +52,7 @@ public class playerController : MonoBehaviour
 
     [Header("Dialogue Settings")]
     [SerializeField] private float dialogueLookSpeed = 3f;
+    [SerializeField] private float dialogueReturnSpeed = 8f;
     private Transform _dialogueLookTarget;
     private Transform _dialoguePlayerTarget;
     private Vector3 _preDialoguePosition;
@@ -185,9 +186,9 @@ public class playerController : MonoBehaviour
         }
     }
 
-    public void EnterDialogue(Transform lookTarget, Transform playerTarget = null)
+    public void EnterDialogue(Transform lookTarget, Transform playerTarget = null, Vector3? originalPosition = null)
     {
-        _preDialoguePosition = transform.position;
+        _preDialoguePosition = originalPosition ?? transform.position;
         _preDialogueRotation = transform.rotation;
         _preDialogueVerticalRotation = verticalRotation;
 
@@ -213,9 +214,9 @@ public class playerController : MonoBehaviour
                Quaternion.Angle(transform.rotation, _preDialogueRotation) > 0.5f ||
                Mathf.Abs(verticalRotation - _preDialogueVerticalRotation) > 0.5f)
         {
-            transform.position = Vector3.Lerp(transform.position, _preDialoguePosition, dialogueLookSpeed * Time.deltaTime);
-            transform.rotation = Quaternion.Slerp(transform.rotation, _preDialogueRotation, dialogueLookSpeed * Time.deltaTime);
-            verticalRotation = Mathf.Lerp(verticalRotation, _preDialogueVerticalRotation, dialogueLookSpeed * Time.deltaTime);
+            transform.position = Vector3.Lerp(transform.position, _preDialoguePosition, dialogueReturnSpeed * Time.deltaTime);
+            transform.rotation = Quaternion.Slerp(transform.rotation, _preDialogueRotation, dialogueReturnSpeed * Time.deltaTime);
+            verticalRotation = Mathf.Lerp(verticalRotation, _preDialogueVerticalRotation, dialogueReturnSpeed * Time.deltaTime);
             cameraTransform.localRotation = Quaternion.Euler(verticalRotation, 0f, 0f);
             yield return null;
         }

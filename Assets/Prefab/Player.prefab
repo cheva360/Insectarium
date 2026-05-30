@@ -114,6 +114,7 @@ MonoBehaviour:
   RadarPingParent: {fileID: 4095257897836163348}
   maxRadarDistance: 40
   minRadarDistance: 0.12
+  minDetectionDistance: 3
   raycastRange: 200
   radarPingSound: {fileID: 8300000, guid: 969c5d20ecc56e348a22f21659539a14, type: 3}
   sweepWidth: 1
@@ -617,7 +618,6 @@ Transform:
   m_Children:
   - {fileID: 8170081054901454619}
   - {fileID: 1127323768313123222}
-  - {fileID: 337015819032667812}
   - {fileID: 7601837805063131349}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: -142.72, z: 0}
@@ -709,6 +709,7 @@ MonoBehaviour:
   radarHideSpeed: 5
   radarHidden: 0
   dialogueLookSpeed: 3
+  dialogueReturnSpeed: 8
   Sprint: 1
   _footstepSound1: {fileID: 8300000, guid: 230951968d8843f4f99c69d0ed4e2a70, type: 3}
   _footstepSound2: {fileID: 8300000, guid: cb82b811dd6300a489265264a7198478, type: 3}
@@ -1159,6 +1160,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1301862033782104416}
+  - {fileID: 337015819032667812}
   m_Father: {fileID: 1622964461773334578}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!20 &430469385691626200
@@ -1397,11 +1399,11 @@ Transform:
   m_GameObject: {fileID: 7538874662742595100}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.24000001, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1622964461773334578}
+  m_Father: {fileID: 8170081054901454619}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!20 &151426831361263695
 Camera:
@@ -1437,7 +1439,7 @@ Camera:
   near clip plane: 0.8
   far clip plane: 1000
   field of view: 70
-  orthographic: 1
+  orthographic: 0
   orthographic size: 5
   m_Depth: -1
   m_CullingMask:

@@ -12,91 +12,90 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f89a4d56630e09646854a338c8601956, type: 3}
   m_Name: Log1
   m_EditorClassIdentifier: Assembly-CSharp::DecoderWordData
-  startAudio: {fileID: 8300000, guid: a449f1c22f6d84f44ad5e97c05dfbb75, type: 3}
+  startAudio: {fileID: 8300000, guid: 4db50ae37520b7849aa3834653987855, type: 3}
   words:
-  - word: 'AudioLog1: '
+  - word: 
     typewriterDuration: 0
-    delayAfterWord: 3.9
+    delayAfterWord: 0.582
+    deleteCharsBefore: 0
+    deletionCharsPerStep: 0
+    deletionSpeed: 0
+  - word: 'AudioLog1: '
+    typewriterDuration: 1.012
+    delayAfterWord: 0
     deleteCharsBefore: 0
     deletionCharsPerStep: 0
     deletionSpeed: 0
   - word: . . . \n
-    typewriterDuration: 4
+    typewriterDuration: 1.137
     delayAfterWord: 0
     deleteCharsBefore: 0
     deletionCharsPerStep: 0
     deletionSpeed: 0
   - word: cls
-    typewriterDuration: 0.182
+    typewriterDuration: 0
     delayAfterWord: 0
     deleteCharsBefore: 0
     deletionCharsPerStep: 0
     deletionSpeed: 0
   - word: 'April 14th 19- '
-    typewriterDuration: 1.834
+    typewriterDuration: 2.576
     delayAfterWord: 0
     deleteCharsBefore: -1
     deletionCharsPerStep: 1
     deletionSpeed: 0
   - word: '[unintelligible] '
     typewriterDuration: 0
-    delayAfterWord: 1.514
+    delayAfterWord: 0.378
     deleteCharsBefore: 0
     deletionCharsPerStep: 0
     deletionSpeed: 0
   - word: 'We have finally found it. '
-    typewriterDuration: 1.842
-    delayAfterWord: 1.579
+    typewriterDuration: 2.025
+    delayAfterWord: 0.603
     deleteCharsBefore: 0
     deletionCharsPerStep: 0
     deletionSpeed: 0
   - word: 'Regenerative capabilities. . . '
-    typewriterDuration: 1.834
-    delayAfterWord: 0.608
+    typewriterDuration: 2.402
+    delayAfterWord: 0.722
     deleteCharsBefore: 0
     deletionCharsPerStep: 0
     deletionSpeed: 0
-  - word: 'radiation resistance. . .  the most robust creature known to science.
-      . .  the perfect subject. '
-    typewriterDuration: 6.835
-    delayAfterWord: 1.339
+  - word: 'radiation resistance. . . '
+    typewriterDuration: 1.996
+    delayAfterWord: 0.984
     deleteCharsBefore: 0
     deletionCharsPerStep: 0
     deletionSpeed: 0
-  - word: 'With [unintelligible] as the focus of our research, our progress is sure
-      to be '
-    typewriterDuration: 4.068
-    delayAfterWord: 0
+  - word: 'the most robust creature known to science. . . '
+    typewriterDuration: 3.059
+    delayAfterWord: 0.976
     deleteCharsBefore: 0
     deletionCharsPerStep: 0
     deletionSpeed: 0
-  - word: 'exponential. '
-    typewriterDuration: 1.551
-    delayAfterWord: 0.78
+  - word: 'the perfect subject. '
+    typewriterDuration: 1.721
+    delayAfterWord: 0.666
+    deleteCharsBefore: 0
+    deletionCharsPerStep: 0
+    deletionSpeed: 0
+  - word: 'With cockroaches as the focus of our research, our progress is sure to
+      be exponential. '
+    typewriterDuration: 6.355
+    delayAfterWord: 2.034
     deleteCharsBefore: 0
     deletionCharsPerStep: 0
     deletionSpeed: 0
   - word: '[unintelligible] '
-    typewriterDuration: 0.771
+    typewriterDuration: 0.709
     delayAfterWord: 0
     deleteCharsBefore: 0
     deletionCharsPerStep: 0
     deletionSpeed: 0
-  - word: 'is in reach, '
-    typewriterDuration: 1.514
-    delayAfterWord: 0
-    deleteCharsBefore: 0
-    deletionCharsPerStep: 0
-    deletionSpeed: 0
-  - word: 'thanks to. . . '
-    typewriterDuration: 0.765
-    delayAfterWord: 1.346
-    deleteCharsBefore: 0
-    deletionCharsPerStep: 0
-    deletionSpeed: 0
-  - word: the cockroach.
-    typewriterDuration: 1.702
-    delayAfterWord: 5.488
+  - word: is finally in reach.
+    typewriterDuration: 1.526
+    delayAfterWord: 0.755
     deleteCharsBefore: 0
     deletionCharsPerStep: 0
     deletionSpeed: 0

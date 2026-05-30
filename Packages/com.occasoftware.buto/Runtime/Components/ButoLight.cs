@@ -75,6 +75,10 @@ namespace OccaSoftware.Buto.Runtime
 
                 return lightIntensity;
             }
+            set
+            {
+                lightIntensity = value;
+            }
         }
 
         public Vector4 LightDirection
@@ -98,20 +102,20 @@ namespace OccaSoftware.Buto.Runtime
         LightAngle lightAngleData;
         public LightAngle LightAngleData
         {
-            get
+        get
+        {
+            if (lightAngleData == null)
             {
-                if (lightAngleData == null)
-                {
-                    lightAngleData = new LightAngle(
-                      lightComponent.type,
-                      lightComponent.innerSpotAngle,
-                      lightComponent.spotAngle,
-                      LightRange,
-                      bias
-                    );
-                }
-                return lightAngleData;
+                lightAngleData = new LightAngle(
+                  lightComponent.type,
+                  lightComponent.innerSpotAngle,
+                  lightComponent.spotAngle,
+                  LightRange,
+                  bias
+                );
             }
+            return lightAngleData;
+        }
         }
 
         public class LightAngle

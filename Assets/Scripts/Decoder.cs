@@ -26,6 +26,8 @@ public class Decoder : MonoBehaviour
 
     [Header("Light Dimming")]
     [SerializeField] private Light decoderLight;
+    [SerializeField] private OccaSoftware.Buto.Runtime.ButoLight decoderButoLight;
+    [SerializeField] private Light secondaryLight;
     [SerializeField] private float lightDimDuration = 0.8f;
     [SerializeField] private float lightRestoreDuration = 0.8f;
 
@@ -35,8 +37,15 @@ public class Decoder : MonoBehaviour
     [Header("Cockroach")]
     [SerializeField] private SmallCockroach smallCockroach;
 
+    [Header("Cassette SFX")]
+    [SerializeField] private AudioSource cassetteAudioSource;
+    [SerializeField] private AudioClip flapOpenClip;
+    [SerializeField] private AudioClip cassetteInsertedClip;
+
     private float _originalLightIntensity;
+    private float _originalSecondaryLightIntensity;
     private Coroutine _lightCoroutine;
+    private Coroutine _secondaryLightCoroutine;
     private bool _sequenceStarted = false;
 
     private bool IsLookingAt()
@@ -77,6 +86,9 @@ public class Decoder : MonoBehaviour
 
     private IEnumerator CassetteInsertSequence()
     {
+        // Capture original position before any movement
+        Vector3 originalPosition = GameController.Instance.player.transform.position;
+
         // ── Phase 1: lerp camera + player to casetteLookTarget ────────────────
         playerController.Instance.radarHidden = true;
         playerController.Instance.SetState(playerController.playerState.Cutscene);
@@ -87,6 +99,13 @@ public class Decoder : MonoBehaviour
             _originalLightIntensity = decoderLight.intensity;
             if (_lightCoroutine != null) StopCoroutine(_lightCoroutine);
             _lightCoroutine = StartCoroutine(LerpLightIntensity(decoderLight, decoderLight.intensity, 0f, lightDimDuration));
+        }
+
+        if (secondaryLight != null)
+        {
+            _originalSecondaryLightIntensity = secondaryLight.intensity;
+            if (_secondaryLightCoroutine != null) StopCoroutine(_secondaryLightCoroutine);
+            _secondaryLightCoroutine = StartCoroutine(LerpSimpleLightIntensity(secondaryLight, secondaryLight.intensity, 15f, lightDimDuration));
         }
 
         if (cassette != null)
@@ -114,6 +133,7 @@ public class Decoder : MonoBehaviour
 
             Renderer cassetteRenderer = cassette.GetComponent<Renderer>();
             bool cockroachTriggered = false;
+            bool flapSoundTriggered = false;
 
             while (true)
             {
@@ -144,17 +164,37 @@ public class Decoder : MonoBehaviour
                     Vector3 euler = casseteFlap.transform.localEulerAngles;
                     casseteFlap.transform.localEulerAngles = new Vector3(euler.x, euler.y, zRot);
 
-                    // Trigger cockroach once flap passes 75% of its rotation
-                    if (!cockroachTriggered && easedFlap >= 0.75f)
+                    // Play flap sound every time threshold is crossed (re-arms when flap retreats)
+                    if (easedFlap >= 0.175f)
                     {
-                        cockroachTriggered = true;
-                        if (smallCockroach != null)
-                            smallCockroach.hasStartedMoving = true;
+                        if (!flapSoundTriggered)
+                        {
+                            flapSoundTriggered = true;
+                            if (cassetteAudioSource != null && flapOpenClip != null)
+                                cassetteAudioSource.PlayOneShot(flapOpenClip);
+                        }
+                    }
+                    else
+                    {
+                        flapSoundTriggered = false;
+                    }
+
+                    if (easedFlap >= 0.75f)
+                    {
+                        if (!cockroachTriggered)
+                        {
+                            cockroachTriggered = true;
+                            if (smallCockroach != null)
+                                smallCockroach.hasStartedMoving = true;
+                        }
                     }
                 }
 
                 if (lp.z >= endZ)
                 {
+                    if (cassetteAudioSource != null && cassetteInsertedClip != null)
+                        cassetteAudioSource.PlayOneShot(cassetteInsertedClip);
+
                     UIController.Instance.TriggerLatestEntryFillOut(destroyDelay: 0.5f);
                     break;
                 }
@@ -167,9 +207,9 @@ public class Decoder : MonoBehaviour
                 StartCoroutine(ReturnFlap());
 
             Destroy(cassette);
-            //set jumpscare face active
-            if (jumpscareFace != null)
-                jumpscareFace.SetActive(true);
+            ////set jumpscare face active
+            //if (jumpscareFace != null)
+            //    jumpscareFace.SetActive(true);
         }
 
         yield return new WaitForSeconds(1.2f);
@@ -178,8 +218,10 @@ public class Decoder : MonoBehaviour
         Transform lookTarget = dialogueLookTarget != null ? dialogueLookTarget : transform;
 
         UIController.Instance.SetActiveDecoder(this);
+        playerController.Instance.EnterDialogue(lookTarget, playerLerpTarget, originalPosition);
+
+        yield return new WaitForSeconds(1.5f);
         UIController.Instance.PlayDecoderTypewriter(wordData);
-        playerController.Instance.EnterDialogue(lookTarget, playerLerpTarget);
 
         if (UIController.Instance.UICollectedCount == UIController.Instance.UIEntryCount)
             Debug.Log("Interacted with Decoder");
@@ -192,12 +234,43 @@ public class Decoder : MonoBehaviour
     /// </summary>
     public void RestoreLight()
     {
-        if (decoderLight == null) return;
-        if (_lightCoroutine != null) StopCoroutine(_lightCoroutine);
-        _lightCoroutine = StartCoroutine(LerpLightIntensity(decoderLight, decoderLight.intensity, _originalLightIntensity, lightRestoreDuration));
+        if (decoderLight != null)
+        {
+            if (_lightCoroutine != null) StopCoroutine(_lightCoroutine);
+            _lightCoroutine = StartCoroutine(LerpLightIntensity(decoderLight, decoderLight.intensity, _originalLightIntensity, lightRestoreDuration));
+        }
+
+        if (secondaryLight != null)
+        {
+            if (_secondaryLightCoroutine != null) StopCoroutine(_secondaryLightCoroutine);
+            _secondaryLightCoroutine = StartCoroutine(LerpSimpleLightIntensity(secondaryLight, secondaryLight.intensity, _originalSecondaryLightIntensity, lightRestoreDuration));
+        }
     }
 
     private IEnumerator LerpLightIntensity(Light light, float from, float to, float duration)
+    {
+        float butoFrom = decoderButoLight != null ? decoderButoLight.LightIntensity : from;
+
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            light.intensity = Mathf.Lerp(from, to, t);
+
+            if (decoderButoLight != null)
+                decoderButoLight.LightIntensity = Mathf.Lerp(butoFrom, to, t);
+
+            yield return null;
+        }
+
+        light.intensity = to;
+        if (decoderButoLight != null)
+            decoderButoLight.LightIntensity = to;
+        _lightCoroutine = null;
+    }
+
+    private IEnumerator LerpSimpleLightIntensity(Light light, float from, float to, float duration)
     {
         float elapsed = 0f;
         while (elapsed < duration)
@@ -207,7 +280,7 @@ public class Decoder : MonoBehaviour
             yield return null;
         }
         light.intensity = to;
-        _lightCoroutine = null;
+        _secondaryLightCoroutine = null;
     }
 
     private IEnumerator ReturnFlap()
