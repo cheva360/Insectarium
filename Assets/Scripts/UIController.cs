@@ -40,6 +40,10 @@ public class UIController : MonoBehaviour
     private GameObject _lastEntryBacking;
     private GameObject _lastEntryCollected;
 
+    // All live entry objects — TriggerLatestEntryFillOut pops from the end.
+    private List<GameObject> _entryBackings = new List<GameObject>();
+    private List<GameObject> _entryCollected = new List<GameObject>();
+
     private int _fillOutPending = 0;
 
     public float CursorBlinkRate = 0.5f;
@@ -75,6 +79,7 @@ public class UIController : MonoBehaviour
     public void AddUIEntry()
     {
         _lastEntryBacking = Instantiate(UIEntryBackingPrefab, UIEntryParent.transform);
+        _entryBackings.Add(_lastEntryBacking);
         UIEntryCount++;
     }
 
@@ -83,6 +88,7 @@ public class UIController : MonoBehaviour
         if (UICollectedCount < UIEntryCount)
         {
             _lastEntryCollected = Instantiate(UIEntryCollectedPrefab, UIEntryCollectedParent.transform);
+            _entryCollected.Add(_lastEntryCollected);
             UICollectedCount++;
         }
     }
@@ -95,9 +101,11 @@ public class UIController : MonoBehaviour
     {
         _fillOutPending = 0;
 
-        if (_lastEntryCollected != null)
+        // Pop the most recently added collected entry
+        GameObject collectedGO = PopLast(_entryCollected);
+        if (collectedGO != null)
         {
-            Image img = _lastEntryCollected.GetComponent<Image>();
+            Image img = collectedGO.GetComponent<Image>();
             if (img != null)
             {
                 img.type       = Image.Type.Filled;
@@ -109,9 +117,11 @@ public class UIController : MonoBehaviour
             }
         }
 
-        if (_lastEntryBacking != null)
+        // Pop the most recently added backing entry
+        GameObject backingGO = PopLast(_entryBackings);
+        if (backingGO != null)
         {
-            Image img = _lastEntryBacking.GetComponent<Image>();
+            Image img = backingGO.GetComponent<Image>();
             if (img != null)
             {
                 img.type       = Image.Type.Filled;
@@ -122,6 +132,15 @@ public class UIController : MonoBehaviour
                 StartCoroutine(LerpFillToZero(img, EntryFillOutDuration, destroyDelay));
             }
         }
+    }
+
+    private GameObject PopLast(List<GameObject> list)
+    {
+        if (list == null || list.Count == 0) return null;
+        int last = list.Count - 1;
+        GameObject go = list[last];
+        list.RemoveAt(last);
+        return go;
     }
 
     private IEnumerator LerpFillToZero(Image image, float duration, float destroyDelay = 0f)
@@ -166,16 +185,26 @@ public class UIController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Re-enables the entry UI parents without triggering light restore or
+    /// dialogue exit. Used between sequential cassette logs.
+    /// </summary>
+    public void RestoreEntryParentsOnly()
+    {
+        if (UIEntryParent != null)         UIEntryParent.SetActive(true);
+        if (UIEntryCollectedParent != null) UIEntryCollectedParent.SetActive(true);
+    }
+
     // Reset audio tape UI when new loop starts
     public void ResetUI()
     {
-        if (UIEntryParent != null) // clear backing ui
+        if (UIEntryParent != null)
         {
             foreach (Transform child in UIEntryParent.transform)
                 Destroy(child.gameObject);
         }
 
-        if (UIEntryCollectedParent != null) // clear collected ui
+        if (UIEntryCollectedParent != null)
         {
             foreach (Transform child in UIEntryCollectedParent.transform)
                 Destroy(child.gameObject);
@@ -185,9 +214,13 @@ public class UIController : MonoBehaviour
         UICollectedCount = 0;
         _lastEntryBacking = null;
         _lastEntryCollected = null;
+        _entryBackings.Clear();
+        _entryCollected.Clear();
     }
 
-    public void PlayDecoderTypewriter(DecoderWordData wordData)
+    private System.Action _typewriterOnComplete;
+
+    public void PlayDecoderTypewriter(DecoderWordData wordData, System.Action onComplete = null)
     {
         if (wordData == null) return;
 
@@ -200,6 +233,7 @@ public class UIController : MonoBehaviour
         _currentChunk = "";
         DecoderText.text = "";
         _isTyping = true;
+        _typewriterOnComplete = onComplete;
 
         if (wordData.startAudio != null && DecoderAudioSource != null)
         {
@@ -297,11 +331,11 @@ public class UIController : MonoBehaviour
         _isTyping = false;
         _decoderTypewriterCoroutine = null;
 
-        // Restore cassette UI now that the crosshair is about to come back
-        RestoreEntryParents();
-
-        // Typewriter finished — lerp player back and restore Normal state
-        playerController.Instance.ExitDialogue();
+        // Notify the Decoder that this log is done. The Decoder is responsible
+        // for calling ExitDialogue() and RestoreEntryParents() at the right time.
+        var cb = _typewriterOnComplete;
+        _typewriterOnComplete = null;
+        cb?.Invoke();
     }
 
     void Update()

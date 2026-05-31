@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
 
@@ -7,8 +8,13 @@ public class Decoder : MonoBehaviour
     private float _interactionDistance = 3f;
     private float _lookAtRadius = 0.1f;
 
-    [Tooltip("Assign one of the 8 DecoderWordData scriptable objects here.")]
-    public DecoderWordData wordData;
+    [Header("Audio Logs")]
+    [Tooltip("All audio log entries in sequential order across all loops.")]
+    [SerializeField] private List<DecoderWordData> audioLogs = new List<DecoderWordData>();
+
+    [Header("Unlock Gate")]
+    [Tooltip("When enabled the decoder is always interactable, ignoring cassette collection count.")]
+    [SerializeField] private bool debugUnlockAlways = false;
 
     [SerializeField] private Transform casetteLookTarget;
     [SerializeField] private GameObject cassette;
@@ -48,6 +54,9 @@ public class Decoder : MonoBehaviour
     private Coroutine _secondaryLightCoroutine;
     private bool _sequenceStarted = false;
 
+    // Persistent across loops — tracks which audio log to start from next session.
+    private int _audioLogIndex = 0;
+
     private bool IsLookingAt()
     {
         Ray ray = Camera.main.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
@@ -66,8 +75,11 @@ public class Decoder : MonoBehaviour
         }
 
         bool inRange = Vector3.Distance(transform.position, GameController.Instance.player.transform.position) <= _interactionDistance;
+        bool unlocked = debugUnlockAlways ||
+                        (UIController.Instance.UIEntryCount > 0 &&
+                         UIController.Instance.UICollectedCount >= UIController.Instance.UIEntryCount);
 
-        if (inRange && IsLookingAt())
+        if (inRange && IsLookingAt() && unlocked)
         {
             UIController.Instance.RequestInteractText(this);
 
@@ -86,14 +98,27 @@ public class Decoder : MonoBehaviour
 
     private IEnumerator CassetteInsertSequence()
     {
-        // Capture original position before any movement
         Vector3 originalPosition = GameController.Instance.player.transform.position;
 
-        // ── Phase 1: lerp camera + player to casetteLookTarget ────────────────
+        // When using the debug override and nothing has been collected yet,
+        // fall back to playing all remaining logs so the sequence always runs.
+        int logsThisSession = (debugUnlockAlways && UIController.Instance.UICollectedCount == 0)
+            ? Mathf.Max(audioLogs.Count - _audioLogIndex, 0)
+            : UIController.Instance.UICollectedCount;
+
+        int startIndex = _audioLogIndex;
+
+        if (logsThisSession == 0 || startIndex >= audioLogs.Count)
+        {
+            // Nothing to play — abort cleanly without touching dialogue state.
+            _sequenceStarted = false;
+            yield break;
+        }
+
+        // ── Initial setup ─────────────────────────────────────────────────────
         playerController.Instance.radarHidden = true;
         playerController.Instance.SetState(playerController.playerState.Cutscene);
 
-        // Begin dimming the light as soon as the player interacts
         if (decoderLight != null)
         {
             _originalLightIntensity = decoderLight.intensity;
@@ -108,120 +133,148 @@ public class Decoder : MonoBehaviour
             _secondaryLightCoroutine = StartCoroutine(LerpSimpleLightIntensity(secondaryLight, secondaryLight.intensity, 15f, lightDimDuration));
         }
 
+        Vector3 cassetteResetPos = cassette != null ? cassette.transform.localPosition : Vector3.zero;
+        Renderer cassetteRenderer = cassette != null ? cassette.GetComponent<Renderer>() : null;
+
         if (cassette != null)
             cassette.SetActive(true);
 
-        if (casetteLookTarget != null)
+        int logsPlayed = 0;
+
+        for (int i = 0; i < logsThisSession; i++)
         {
-            while (!playerController.Instance.LerpCameraTowardsTarget(casetteLookTarget, cameraLerpSpeed))
+            int logIndex = startIndex + i;
+            if (logIndex >= audioLogs.Count) break;
+
+            // ── Reset cassette for each log after the first ───────────────────
+            if (i > 0)
             {
-                if (playerLerpTarget != null)
-                    GameController.Instance.player.transform.position = Vector3.Lerp(
-                        GameController.Instance.player.transform.position,
-                        playerLerpTarget.position,
-                        cameraLerpSpeed * Time.deltaTime);
+                UIController.Instance.RestoreEntryParentsOnly();
 
-                yield return null;
-            }
-        }
-
-        // ── Phase 2: mouse-driven cassette slide ──────────────────────────────
-        if (cassette != null)
-        {
-            float startZ = cassette.transform.localPosition.z;
-            float endZ   = startZ + 1.5f;
-
-            Renderer cassetteRenderer = cassette.GetComponent<Renderer>();
-            bool cockroachTriggered = false;
-            bool flapSoundTriggered = false;
-
-            while (true)
-            {
-                float mouseX = Input.GetAxis("Mouse X");
-                float mouseY = Input.GetAxis("Mouse Y");
-                float delta  = (mouseX * -1f + mouseY) * 0.5f * cassetteMouseSensitivity;
-
-                Vector3 lp = cassette.transform.localPosition;
-                lp.z = Mathf.Clamp(lp.z + delta, startZ, endZ);
-                cassette.transform.localPosition = lp;
-
-                float progress = Mathf.InverseLerp(startZ, endZ, lp.z);
-
-                // Drive snap intensity – EaseOutCubic
-                if (cassetteRenderer != null)
+                if (cassette != null)
                 {
-                    float eased = 1f - Mathf.Pow(1f - progress, 3f);
-                    float snapIntensity = Mathf.Lerp(0.0001f, 0.1f, eased);
-                    cassetteRenderer.material.SetFloat("_SnapIntensity", snapIntensity);
+                    cassette.transform.localPosition = cassetteResetPos;
+                    if (cassetteRenderer != null)
+                        cassetteRenderer.material.SetFloat("_SnapIntensity", 0.0001f);
                 }
-
-                // Drive flap rotation – EaseOutCubic (0 → -90), starts at 20% progress
                 if (casseteFlap != null)
                 {
-                    float flapProgress = Mathf.InverseLerp(0.2f, 1f, progress);
-                    float easedFlap = 1f - Mathf.Pow(1f - flapProgress, 3f);
-                    float zRot = Mathf.Lerp(0f, -90f, easedFlap);
-                    Vector3 euler = casseteFlap.transform.localEulerAngles;
-                    casseteFlap.transform.localEulerAngles = new Vector3(euler.x, euler.y, zRot);
+                    Vector3 e = casseteFlap.transform.localEulerAngles;
+                    casseteFlap.transform.localEulerAngles = new Vector3(e.x, e.y, 0f);
+                }
+            }
 
-                    // Play flap sound every time threshold is crossed (re-arms when flap retreats)
-                    if (easedFlap >= 0.175f)
+            // ── Phase 1: lerp camera + player to casetteLookTarget ────────────
+            if (casetteLookTarget != null)
+            {
+                while (!playerController.Instance.LerpCameraTowardsTarget(casetteLookTarget, cameraLerpSpeed))
+                {
+                    if (playerLerpTarget != null)
+                        GameController.Instance.player.transform.position = Vector3.Lerp(
+                            GameController.Instance.player.transform.position,
+                            playerLerpTarget.position,
+                            cameraLerpSpeed * Time.deltaTime);
+                    yield return null;
+                }
+            }
+
+            // ── Phase 2: mouse-driven cassette slide ──────────────────────────
+            if (cassette != null)
+            {
+                float startZ = cassetteResetPos.z;
+                float endZ   = startZ + 1.5f;
+                bool cockroachTriggered = false;
+                bool flapSoundTriggered = false;
+
+                while (true)
+                {
+                    float mouseX = Input.GetAxis("Mouse X");
+                    float mouseY = Input.GetAxis("Mouse Y");
+                    float delta  = (mouseX * -1f + mouseY) * 0.5f * cassetteMouseSensitivity;
+
+                    Vector3 lp = cassette.transform.localPosition;
+                    lp.z = Mathf.Clamp(lp.z + delta, startZ, endZ);
+                    cassette.transform.localPosition = lp;
+
+                    float progress = Mathf.InverseLerp(startZ, endZ, lp.z);
+
+                    if (cassetteRenderer != null)
                     {
-                        if (!flapSoundTriggered)
+                        float eased = 1f - Mathf.Pow(1f - progress, 3f);
+                        cassetteRenderer.material.SetFloat("_SnapIntensity", Mathf.Lerp(0.0001f, 0.1f, eased));
+                    }
+
+                    if (casseteFlap != null)
+                    {
+                        float flapProgress = Mathf.InverseLerp(0.2f, 1f, progress);
+                        float easedFlap = 1f - Mathf.Pow(1f - flapProgress, 3f);
+                        float zRot = Mathf.Lerp(0f, -90f, easedFlap);
+                        Vector3 euler = casseteFlap.transform.localEulerAngles;
+                        casseteFlap.transform.localEulerAngles = new Vector3(euler.x, euler.y, zRot);
+
+                        if (easedFlap >= 0.175f)
                         {
-                            flapSoundTriggered = true;
-                            if (cassetteAudioSource != null && flapOpenClip != null)
-                                cassetteAudioSource.PlayOneShot(flapOpenClip);
+                            if (!flapSoundTriggered)
+                            {
+                                flapSoundTriggered = true;
+                                if (cassetteAudioSource != null && flapOpenClip != null)
+                                    cassetteAudioSource.PlayOneShot(flapOpenClip);
+                            }
                         }
-                    }
-                    else
-                    {
-                        flapSoundTriggered = false;
-                    }
+                        else
+                        {
+                            flapSoundTriggered = false;
+                        }
 
-                    if (easedFlap >= 0.75f)
-                    {
-                        if (!cockroachTriggered)
+                        if (easedFlap >= 0.75f && !cockroachTriggered)
                         {
                             cockroachTriggered = true;
                             if (smallCockroach != null)
                                 smallCockroach.hasStartedMoving = true;
                         }
                     }
+
+                    if (lp.z >= endZ)
+                    {
+                        if (cassetteAudioSource != null && cassetteInsertedClip != null)
+                            cassetteAudioSource.PlayOneShot(cassetteInsertedClip);
+
+                        UIController.Instance.TriggerLatestEntryFillOut(destroyDelay: 0.5f);
+                        break;
+                    }
+
+                    yield return null;
                 }
 
-                if (lp.z >= endZ)
-                {
-                    if (cassetteAudioSource != null && cassetteInsertedClip != null)
-                        cassetteAudioSource.PlayOneShot(cassetteInsertedClip);
-
-                    UIController.Instance.TriggerLatestEntryFillOut(destroyDelay: 0.5f);
-                    break;
-                }
-
-                yield return null;
+                if (casseteFlap != null)
+                    StartCoroutine(ReturnFlap());
             }
 
-            // ── Flap return: run independently so Phase 3 starts without waiting ──
-            if (casseteFlap != null)
-                StartCoroutine(ReturnFlap());
+            yield return new WaitForSeconds(1.2f);
 
-            Destroy(cassette);
-            ////set jumpscare face active
-            //if (jumpscareFace != null)
-            //    jumpscareFace.SetActive(true);
+            // ── Phase 3: dialogue + audio log playback ────────────────────────
+            Transform lookTarget = dialogueLookTarget != null ? dialogueLookTarget : transform;
+            UIController.Instance.SetActiveDecoder(this);
+            playerController.Instance.EnterDialogue(lookTarget, playerLerpTarget, originalPosition);
+
+            yield return new WaitForSeconds(1.5f);
+
+            bool logFinished = false;
+            UIController.Instance.PlayDecoderTypewriter(audioLogs[logIndex], () => logFinished = true);
+            yield return new WaitUntil(() => logFinished);
+
+            logsPlayed++;
+
+            bool moreLogsRemain = i < logsThisSession - 1 && (startIndex + i + 1) < audioLogs.Count;
+            if (moreLogsRemain)
+                playerController.Instance.SetState(playerController.playerState.Cutscene);
         }
 
-        yield return new WaitForSeconds(1.2f);
+        _audioLogIndex += logsPlayed;
 
-        // ── Phase 3: start dialogue (InDialogue state handles the camera lerp) ─
-        Transform lookTarget = dialogueLookTarget != null ? dialogueLookTarget : transform;
-
-        UIController.Instance.SetActiveDecoder(this);
-        playerController.Instance.EnterDialogue(lookTarget, playerLerpTarget, originalPosition);
-
-        yield return new WaitForSeconds(1.5f);
-        UIController.Instance.PlayDecoderTypewriter(wordData);
+        // ── Final cleanup ─────────────────────────────────────────────────────
+        UIController.Instance.RestoreEntryParents();
+        playerController.Instance.ExitDialogue();
 
         if (UIController.Instance.UICollectedCount == UIController.Instance.UIEntryCount)
             Debug.Log("Interacted with Decoder");
