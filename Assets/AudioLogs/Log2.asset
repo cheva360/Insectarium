@@ -1,0 +1,82 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f89a4d56630e09646854a338c8601956, type: 3}
+  m_Name: Log2
+  m_EditorClassIdentifier: Assembly-CSharp::DecoderWordData
+  startAudio: {fileID: 8300000, guid: 1d8d55b88c1b9464194fedc1f1bc608f, type: 3}
+  words:
+  - word: 
+    typewriterDuration: 0
+    delayAfterWord: 1.594
+    deleteCharsBefore: 0
+    deletionCharsPerStep: 0
+    deletionSpeed: 0
+  - word: 'Laboratory Meeting Audio Log:  '
+    typewriterDuration: 2.154
+    delayAfterWord: 0.132
+    deleteCharsBefore: 0
+    deletionCharsPerStep: 0
+    deletionSpeed: 0
+  - word: 'Dr. Koresh, 21 March 19 '
+    typewriterDuration: 3.437
+    delayAfterWord: 0
+    deleteCharsBefore: 0
+    deletionCharsPerStep: 0
+    deletionSpeed: 0
+  - word: '[unintelligble].'
+    typewriterDuration: 0
+    delayAfterWord: 0.63
+    deleteCharsBefore: 0
+    deletionCharsPerStep: 0
+    deletionSpeed: 0
+  - word: "\u2026your hard work has not gone unnoticed. "
+    typewriterDuration: 2.806
+    delayAfterWord: 0.427
+    deleteCharsBefore: 0
+    deletionCharsPerStep: 0
+    deletionSpeed: 0
+  - word: 'Each day, we are one step closer to fulfilling our noble goal, '
+    typewriterDuration: 4.418
+    delayAfterWord: 0.589
+    deleteCharsBefore: 0
+    deletionCharsPerStep: 0
+    deletionSpeed: 0
+  - word: 'thanks to all of you. '
+    typewriterDuration: 1.308
+    delayAfterWord: 0.987
+    deleteCharsBefore: 0
+    deletionCharsPerStep: 0
+    deletionSpeed: 0
+  - word: 'Thank you for believing in me. . . '
+    typewriterDuration: 2.118
+    delayAfterWord: 0.636
+    deleteCharsBefore: 0
+    deletionCharsPerStep: 0
+    deletionSpeed: 0
+  - word: in my vision.
+    typewriterDuration: 1.098
+    delayAfterWord: 1.527
+    deleteCharsBefore: 0
+    deletionCharsPerStep: 0
+    deletionSpeed: 0
+  - word: \n
+    typewriterDuration: 0.5
+    delayAfterWord: 0
+    deleteCharsBefore: 0
+    deletionCharsPerStep: 0
+    deletionSpeed: 0
+  - word: 
+    typewriterDuration: 0
+    delayAfterWord: 0
+    deleteCharsBefore: -1
+    deletionCharsPerStep: 5
+    deletionSpeed: 0
