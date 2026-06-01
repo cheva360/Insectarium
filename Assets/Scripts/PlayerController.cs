@@ -118,8 +118,14 @@ public class playerController : MonoBehaviour
     void Start()
     {
         characterController = GetComponent<CharacterController>();
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+
+        // Don't lock the cursor at startup if the main menu is taking over
+        if (!MainMenuController.IsInMainMenu)
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible   = false;
+        }
+
         playerCamera = cameraTransform.GetComponent<Camera>();
 
         if (_audioSource == null)
@@ -136,9 +142,9 @@ public class playerController : MonoBehaviour
 
         baseMoveSpeed = moveSpeed;
 
-        _cachedScreenWidth = Screen.width;
+        _cachedScreenWidth  = Screen.width;
         _cachedScreenHeight = Screen.height;
-        _cachedAspect = (float)_cachedScreenWidth / _cachedScreenHeight;
+        _cachedAspect       = (float)_cachedScreenWidth / _cachedScreenHeight;
     }
 
     private Vector3 _raycastStart => cameraTransform.position;
@@ -297,6 +303,11 @@ public class playerController : MonoBehaviour
                 _dialoguePlayerTarget = null;
                 Cursor.lockState = CursorLockMode.Locked;
                 Cursor.visible = false;
+                break;
+
+            case playerState.Cutscene:
+            case playerState.Disabled:
+                characterController.enabled = true;
                 break;
         }
     }
@@ -532,5 +543,22 @@ public class playerController : MonoBehaviour
 
         // Reset vertical velocity so accumulated gravity doesn't snap the player.
         velocity.y = -2f;
+    }
+
+    /// <summary>
+    /// Instantly snaps the radar model to the fully hidden position with no lerp.
+    /// Call this before the first frame to avoid the slide-in on scene load.
+    /// </summary>
+    public void SnapRadarToHidden()
+    {
+        radarHidden    = true;
+        _radarCurrentY = -0.8f;
+
+        if (radar3DModel != null)
+        {
+            Vector3 pos = radar3DModel.localPosition;
+            pos.y = _radarCurrentY;
+            radar3DModel.localPosition = pos;
+        }
     }
 }

@@ -2,16 +2,15 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-public class PauseMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
+public class MainMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
 {
     [Tooltip("The '►' or select indicator to the left of this button's label.")]
     [SerializeField] private GameObject selectPrompt;
 
-    [Tooltip("If true, clicking this button calls PauseManager.Unpause().")]
-    [SerializeField] private bool isResumeButton = false;
+    [Tooltip("The action this button performs.")]
+    [SerializeField] private ButtonAction action = ButtonAction.None;
 
-    [Tooltip("If true, clicking this button calls PauseManager.QuitToMenu().")]
-    [SerializeField] private bool isQuitToMenuButton = false;
+    public enum ButtonAction { None, Start, Settings }
 
     [Header("Arrow Bob")]
     [SerializeField] private float bobDistance = 8f;
@@ -35,7 +34,7 @@ public class PauseMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExit
 
     public void OnPointerEnter(PointerEventData eventData)
     {
-        if (!PauseManager.IsPaused) return;
+        if (!MainMenuController.IsInMainMenu) return;
 
         if (selectPrompt != null)
         {
@@ -54,13 +53,18 @@ public class PauseMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExit
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        if (!PauseManager.IsPaused) return;
+        if (!MainMenuController.IsInMainMenu) return;
+        if (MainMenuController.Instance == null) return;
 
-        if (isResumeButton && PauseManager.Instance != null)
-            PauseManager.Instance.Unpause();
-
-        if (isQuitToMenuButton && PauseManager.Instance != null)
-            PauseManager.Instance.QuitToMenu();
+        switch (action)
+        {
+            case ButtonAction.Start:
+                MainMenuController.Instance.OnStartPressed();
+                break;
+            case ButtonAction.Settings:
+                MainMenuController.Instance.OnSettingsPressed();
+                break;
+        }
     }
 
     private void StartBob()
@@ -82,7 +86,6 @@ public class PauseMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExit
             _bobCoroutine = null;
         }
 
-        // Reset arrow to origin position
         if (selectPrompt != null)
         {
             RectTransform rt = selectPrompt.GetComponent<RectTransform>();
@@ -104,7 +107,7 @@ public class PauseMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExit
     void Update()
     {
         // If state changed while hovering, force-hide the prompt
-        if (!PauseManager.IsPaused && selectPrompt != null && selectPrompt.activeSelf)
+        if (!MainMenuController.IsInMainMenu && selectPrompt != null && selectPrompt.activeSelf)
         {
             StopBob();
             selectPrompt.SetActive(false);

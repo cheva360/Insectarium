@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+using UnityEngine.SceneManagement;
 
 public class PauseManager : MonoBehaviour
 {
@@ -57,6 +58,8 @@ public class PauseManager : MonoBehaviour
 
     void Update()
     {
+        if (MainMenuController.IsInMainMenu) return;
+
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             if (IsPaused) Unpause();
@@ -92,7 +95,7 @@ public class PauseManager : MonoBehaviour
             if (UIController.Instance.UIEntryCollectedParent != null)
                 UIController.Instance.UIEntryCollectedParent.SetActive(false);
             if (UIController.Instance.CursorImage != null)
-                UIController.Instance.CursorImage.enabled = false;
+                UIController.Instance.CursorImage.gameObject.SetActive(false);
         }
 
         // Show pause screen
@@ -149,7 +152,7 @@ public class PauseManager : MonoBehaviour
             if (UIController.Instance.UIEntryCollectedParent != null)
                 UIController.Instance.UIEntryCollectedParent.SetActive(true);
             if (UIController.Instance.CursorImage != null)
-                UIController.Instance.CursorImage.enabled = true;
+                UIController.Instance.CursorImage.gameObject.SetActive(true);
         }
 
         // Re-lock cursor — only when player is in Normal state (not dialogue/cutscene)
@@ -216,5 +219,78 @@ public class PauseManager : MonoBehaviour
         _dof.gaussianEnd.Override(_prePauseGaussianEnd);
 
         _dofCoroutine = null;
+    }
+
+    public void QuitToMenu()
+    {
+        if (_quitCoroutine != null) return;
+        _quitCoroutine = StartCoroutine(QuitToMenuCoroutine());
+    }
+
+    private Coroutine _quitCoroutine;
+
+    [Header("Quit To Menu")]
+    [SerializeField] private float quitFadeOutDuration = 4f;
+
+    private IEnumerator QuitToMenuCoroutine()
+    {
+        // Restore timeScale immediately so deltaTime-driven effects run
+        IsPaused = false;
+        Time.timeScale = 1f;
+
+        foreach (var state in _savedAudio)
+            if (state.source != null && state.wasPlaying)
+                state.source.UnPause();
+        _savedAudio.Clear();
+
+        if (pauseScreenRoot != null)
+            pauseScreenRoot.SetActive(false);
+
+        // Stop any running DOF coroutine — we're driving it ourselves now
+        if (_dofCoroutine != null) { StopCoroutine(_dofCoroutine); _dofCoroutine = null; }
+
+        // Grab post-processing overrides exactly like LoopTrigger does
+        UIController.Instance.PostProcessingVolume.profile.TryGet(out DepthOfField dof);
+        UIController.Instance.PostProcessingVolume.profile.TryGet(out FilmGrain filmGrain);
+        UIController.Instance.PostProcessingVolume.profile.TryGet(out MotionBlur motionBlur);
+
+        // Lock the player in place for the duration
+        if (playerController.Instance != null)
+            playerController.Instance.SetState(playerController.playerState.Cutscene);
+
+        float elapsed = 0f;
+        while (elapsed < quitFadeOutDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / quitFadeOutDuration);
+
+            // Depth of field
+            if (dof != null)
+                dof.focalLength.value = Mathf.Lerp(0f, 200f, t);
+
+            // Film grain
+            if (filmGrain != null)
+                filmGrain.intensity.value = Mathf.Lerp(0f, 0.5f, t);
+
+            // Motion blur
+            if (motionBlur != null)
+                motionBlur.intensity.value = Mathf.Lerp(0f, 1f, t);
+
+            // Camera shake
+            UIController.Instance.ShakeMagnitude = Mathf.Lerp(0f, 0.005f, t);
+
+            // Fade to black
+            UIController.Instance.Fade.color = new Color(0f, 0f, 0f, t);
+
+            yield return null;
+        }
+
+        // Snap fully black and reset shake
+        UIController.Instance.Fade.color     = new Color(0f, 0f, 0f, 1f);
+        UIController.Instance.ShakeMagnitude = 0f;
+
+        yield return new WaitForSeconds(0.3f);
+
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 }
