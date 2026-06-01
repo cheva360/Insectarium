@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 8badd779fe0e82f448e37fc142f04d9d
+guid: dc126edf750004c4fbfc396412eb7ccb
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
@@ -7,23 +7,8 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
-      name: arm_mat
-    second: {fileID: 2100000, guid: 9beb83c99f1201442b0cf275272e3eaa, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: cassette_mat
-    second: {fileID: 2100000, guid: b014a9bb76d1c37438b3b2e58a7e0a82, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: cockroach_mat
-    second: {fileID: 2100000, guid: ce1c2450b2195cf499fe0a7470e2ff96, type: 2}
-  - first:
-      type: UnityEngine:Material
-      assembly: UnityEngine.CoreModule
-      name: head_mat
-    second: {fileID: 2100000, guid: 9bd74490c79644d4f86a6828f972beeb, type: 2}
+      name: Phase2.2
+    second: {fileID: 2100000, guid: 675b49f227b62a44da2aba4a776d0e02, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
@@ -49,7 +34,36 @@ ModelImporter:
     animationWrapMode: 0
     extraExposedTransformPaths: []
     extraUserProperties: []
-    clipAnimations: []
+    clipAnimations:
+    - serializedVersion: 16
+      name: Bounce
+      takeName: Bounce
+      internalID: -2597794908530434257
+      firstFrame: 0
+      lastFrame: 200
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 1
+      loopBlend: 0
+      loopBlendOrientation: 0
+      loopBlendPositionY: 0
+      loopBlendPositionXZ: 0
+      keepOriginalOrientation: 0
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 0
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask: []
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
     isReadable: 0
   meshes:
     lODScreenPercentages: []
