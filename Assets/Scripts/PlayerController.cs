@@ -19,7 +19,8 @@ public class playerController : MonoBehaviour
         Normal,      // Can move, interact, and enter cutscenes/dialogue
         InDialogue,  // Cannot move camera lerps to npc
         Cutscene,    // Cannot move camera controlled by cutscene
-        Disabled     // no movement or interactions
+        Disabled,    // no movement or interactions
+        Paused       // game is paused — no input processed
     }
 
     [Header("State")]
@@ -145,6 +146,9 @@ public class playerController : MonoBehaviour
 
     void Update()
     {
+        // Block all player input and processing while paused
+        if (PauseManager.IsPaused) return;
+
         //esc to unlock cursor for debuggging
         if (Input.GetMouseButtonDown(0) && Application.isFocused)
         {
