@@ -162,13 +162,13 @@ MonoBehaviour:
     m_Value: 0
   directionalForward:
     m_OverrideState: 0
-    m_Value: {r: 1, g: 1, b: 1, a: 1}
+    m_Value: {r: 0, g: 0, b: 0, a: 1}
   directionalBack:
     m_OverrideState: 0
     m_Value: {r: 1, g: 1, b: 1, a: 1}
   directionalRatio:
     m_OverrideState: 0
-    m_Value: 1
+    m_Value: 0
   noiseTexture:
     m_OverrideState: 0
     m_Value: {fileID: 0}
