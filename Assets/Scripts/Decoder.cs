@@ -182,7 +182,7 @@ public class Decoder : MonoBehaviour
             if (cassette != null)
             {
                 float startX = cassetteResetPos.x;   // ~2  (furthest out)
-                float endX   = -0.15f;                // fully inserted
+                float endX = -0.4f;               // fully inserted
                 bool cockroachTriggered = false;
                 bool flapSoundTriggered = false;
 
