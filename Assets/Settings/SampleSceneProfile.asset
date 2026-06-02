@@ -62,7 +62,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9392aacf3349be549bb1fd9eece49154, type: 3}
   m_Name: ButoVolumetricFog
   m_EditorClassIdentifier: OccaSoftware.Buto.Runtime::OccaSoftware.Buto.Runtime.ButoVolumetricFog
-  active: 0
+  active: 1
   mode:
     m_OverrideState: 1
     m_Value: 1
