@@ -3954,7 +3954,7 @@ MonoBehaviour:
   collectibleObject: {fileID: 3243910037746874724}
   raiseButton: {fileID: 0}
   raiseAudioSource: {fileID: 0}
-  raiseClip: {fileID: 0}
+  raiseClip: {fileID: 8300000, guid: c6837f623f9ddfe4abfb6522c6b82150, type: 3}
 --- !u!65 &723798240889091966
 BoxCollider:
   m_ObjectHideFlags: 0
