@@ -12,12 +12,12 @@ Shader "Custom/PSXLit"
         _AffineOn ("Affine Mapping On", Range(0,1)) = 1
         
         _SpecularExponent("Specular Exponent", Float) = 80
-        _k ("Ambient, Diffuse, Specular", Vector) = (0.5,0.5,0.8)
+        _k ("Ambient, Diffuse, Specular", Vector) = (0.1,0.1,0.5)
         
         [HDR] _EmissionColor("Emission Color", Color) = (1,1,1,1)
         [NoScaleOffset] _EmissionMap("Emission Map", 2D) = "white" {}
         
-        _WaveSize ("Wave Size", Float) = 1
+        _WaveSize ("Wave Size", Float) = 0
         _WaveLength ("Wave Length", Float) = 1
         _Frequency ("Frequency", Float) = 1
         _MinY ("Min Y", Float) = 0
@@ -129,8 +129,7 @@ Shader "Custom/PSXLit"
 
                 float4 worldPosition = mul(UNITY_MATRIX_MV, IN.positionOS);
                 
-                float waveAmplitude = _WaveSize *  clamp((IN.positionOS.y - _MinY) / (_MaxY - _MinY), 0, 1);
-
+                float waveAmplitude = _WaveSize * clamp((IN.positionOS.y - _MinY) / (_MaxY - _MinY), 0, 1);
                 IN.positionOS.x += sin((IN.positionOS.y + _Time * _Frequency) / _WaveLength) * waveAmplitude;
 
                 OUT.positionHCS = TransformObjectToHClip(IN.positionOS.xyz);
@@ -264,6 +263,7 @@ Shader "Custom/PSXLit"
             ENDHLSL
         }
 
+        //UsePass "Legacy Shaders/VertexLit/SHADOWCASTER"
         Pass
         {
             Name "ShadowCaster"
