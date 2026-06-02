@@ -618,22 +618,22 @@ PrefabInstance:
     - target: {fileID: -8679921383154817045, guid: 23225b988b357e24b9f3e495beb900d7,
         type: 3}
       propertyPath: m_LocalPosition.x
-      value: -70.09007
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 23225b988b357e24b9f3e495beb900d7,
         type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.26
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 23225b988b357e24b9f3e495beb900d7,
         type: 3}
       propertyPath: m_LocalPosition.z
-      value: 33.375538
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 23225b988b357e24b9f3e495beb900d7,
         type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.5378071
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 23225b988b357e24b9f3e495beb900d7,
         type: 3}
@@ -643,7 +643,7 @@ PrefabInstance:
     - target: {fileID: -8679921383154817045, guid: 23225b988b357e24b9f3e495beb900d7,
         type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0.843068
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 23225b988b357e24b9f3e495beb900d7,
         type: 3}
@@ -658,11 +658,21 @@ PrefabInstance:
     - target: {fileID: -8679921383154817045, guid: 23225b988b357e24b9f3e495beb900d7,
         type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
-      value: 114.931
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 23225b988b357e24b9f3e495beb900d7,
         type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -5363424281805771908, guid: 23225b988b357e24b9f3e495beb900d7,
+        type: 3}
+      propertyPath: m_CastShadows
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -4791300549530949414, guid: 23225b988b357e24b9f3e495beb900d7,
+        type: 3}
+      propertyPath: m_CastShadows
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -2181743766629440291, guid: 23225b988b357e24b9f3e495beb900d7,
