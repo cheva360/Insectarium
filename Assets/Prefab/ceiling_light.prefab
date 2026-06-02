@@ -17,7 +17,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &8405498436122190718
 Transform:
@@ -44,11 +44,11 @@ Light:
   m_Enabled: 1
   serializedVersion: 12
   m_Type: 0
-  m_Color: {r: 0.99999994, g: 0.95130366, b: 0.86118585, a: 1}
+  m_Color: {r: 0.5446871, g: 0.7132075, b: 0.50462794, a: 1}
   m_Intensity: 0
   m_Range: 10.76
-  m_SpotAngle: 89.61698
-  m_InnerSpotAngle: 89.61698
+  m_SpotAngle: 55.429646
+  m_InnerSpotAngle: 55.429646
   m_CookieSize2D: {x: 10, y: 10}
   m_Shadows:
     m_Type: 2
@@ -146,7 +146,7 @@ MonoBehaviour:
   lightColor: {r: 1, g: 0.9378567, b: 0.8611859, a: 1}
   bias: 0
   lightRange: 10.76
-  lightIntensity: 10.57
+  lightIntensity: 11.21
   IntensityMultiplier: 1
 --- !u!1 &3234010536277934123
 GameObject:
@@ -165,7 +165,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &9105218515685523676
 Transform:
@@ -294,7 +294,7 @@ MonoBehaviour:
   lightColor: {r: 1, g: 0.9378567, b: 0.8611859, a: 1}
   bias: 0
   lightRange: 10.76
-  lightIntensity: 10.57
+  lightIntensity: 2.85
   IntensityMultiplier: 1
 --- !u!1 &3307220875392330625
 GameObject:
@@ -313,7 +313,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &5005442818681135887
 Transform:
@@ -461,7 +461,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &5267328104555317394
 Transform:
@@ -488,8 +488,8 @@ Light:
   m_Enabled: 1
   serializedVersion: 12
   m_Type: 2
-  m_Color: {r: 1, g: 0.9529412, b: 0.8627451, a: 1}
-  m_Intensity: 1.65
+  m_Color: {r: 0.59547806, g: 0.6509804, b: 0.3254902, a: 1}
+  m_Intensity: 2.6
   m_Range: 57.14
   m_SpotAngle: 179
   m_InnerSpotAngle: 33.90151
@@ -590,7 +590,7 @@ MonoBehaviour:
   lightColor: {r: 1, g: 1, b: 1, a: 1}
   bias: 2.63
   lightRange: 37.53
-  lightIntensity: 60.3
+  lightIntensity: 55.36
   IntensityMultiplier: 1
 --- !u!1 &5001956597129878140
 GameObject:
@@ -609,7 +609,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &7605004336856299624
 Transform:
@@ -737,8 +737,8 @@ MonoBehaviour:
   areaSizeCached: {x: 1, y: 1, z: 0, w: 0}
   lightColor: {r: 1, g: 0.9378567, b: 0.8611859, a: 1}
   bias: 0
-  lightRange: 10.76
-  lightIntensity: 10.57
+  lightRange: 9.6
+  lightIntensity: 9.61
   IntensityMultiplier: 1
 --- !u!1001 &88292859325808897
 PrefabInstance:
@@ -766,37 +766,37 @@ PrefabInstance:
     - target: {fileID: -8679921383154817045, guid: 23225b988b357e24b9f3e495beb900d7,
         type: 3}
       propertyPath: m_LocalPosition.x
-      value: 29.7
+      value: 8.76
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 23225b988b357e24b9f3e495beb900d7,
         type: 3}
       propertyPath: m_LocalPosition.y
-      value: 3.18
+      value: 4.02
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 23225b988b357e24b9f3e495beb900d7,
         type: 3}
       propertyPath: m_LocalPosition.z
-      value: -1.85
+      value: -31.57
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 23225b988b357e24b9f3e495beb900d7,
         type: 3}
       propertyPath: m_LocalRotation.w
-      value: 1
+      value: 0.999875
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 23225b988b357e24b9f3e495beb900d7,
         type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 23225b988b357e24b9f3e495beb900d7,
         type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0
+      value: 0.015811471
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 23225b988b357e24b9f3e495beb900d7,
         type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 23225b988b357e24b9f3e495beb900d7,
         type: 3}
@@ -806,17 +806,37 @@ PrefabInstance:
     - target: {fileID: -8679921383154817045, guid: 23225b988b357e24b9f3e495beb900d7,
         type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
+      value: 1.812
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 23225b988b357e24b9f3e495beb900d7,
         type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -2181743766629440291, guid: 23225b988b357e24b9f3e495beb900d7,
+        type: 3}
+      propertyPath: m_StaticEditorFlags
+      value: 2147483647
+      objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 23225b988b357e24b9f3e495beb900d7,
         type: 3}
       propertyPath: m_Name
       value: ceiling_light
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 23225b988b357e24b9f3e495beb900d7,
+        type: 3}
+      propertyPath: m_StaticEditorFlags
+      value: 2147483647
+      objectReference: {fileID: 0}
+    - target: {fileID: 5252682845850649624, guid: 23225b988b357e24b9f3e495beb900d7,
+        type: 3}
+      propertyPath: m_StaticEditorFlags
+      value: 2147483647
+      objectReference: {fileID: 0}
+    - target: {fileID: 6014503084441653313, guid: 23225b988b357e24b9f3e495beb900d7,
+        type: 3}
+      propertyPath: m_StaticEditorFlags
+      value: 2147483647
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
