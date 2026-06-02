@@ -70,7 +70,10 @@ public class MainMenuController : MonoBehaviour
 
     private IEnumerator InitMainMenu()
     {
-        yield return null; // wait one frame so all Awakes have run
+        yield return null;
+
+        // Ensure AudioListener is never silenced by an uninitialised slider value
+        AudioListener.volume = 1f;
 
         // ── Snapshot the player's original main-menu transform ────────────────
         _menuPlayerPos = Player.position;

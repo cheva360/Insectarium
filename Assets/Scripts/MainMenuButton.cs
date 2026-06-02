@@ -10,14 +10,19 @@ public class MainMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExitH
     [Tooltip("The action this button performs.")]
     [SerializeField] private ButtonAction action = ButtonAction.None;
 
-    public enum ButtonAction { None, Start, Settings }
-
     [Header("Arrow Bob")]
     [SerializeField] private float bobDistance = 8f;
     [SerializeField] private float bobSpeed    = 4f;
 
+    [Header("Audio")]
+    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private AudioClip   hoverSound;
+    [SerializeField] private AudioClip   clickSound;
+
     private Coroutine _bobCoroutine;
     private Vector2   _promptOrigin;
+
+    public enum ButtonAction { None, Start, Settings }
 
     void OnEnable()
     {
@@ -35,6 +40,9 @@ public class MainMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExitH
     public void OnPointerEnter(PointerEventData eventData)
     {
         if (!MainMenuController.IsInMainMenu) return;
+
+        if (audioSource != null && hoverSound != null)
+            audioSource.PlayOneShot(hoverSound);
 
         if (selectPrompt != null)
         {
@@ -55,6 +63,9 @@ public class MainMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExitH
     {
         if (!MainMenuController.IsInMainMenu) return;
         if (MainMenuController.Instance == null) return;
+
+        if (audioSource != null && clickSound != null)
+            audioSource.PlayOneShot(clickSound);
 
         switch (action)
         {
