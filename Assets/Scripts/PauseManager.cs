@@ -41,6 +41,10 @@ public class PauseManager : MonoBehaviour
     private float              _prePauseGaussianStart;
     private float              _prePauseGaussianEnd;
 
+    private bool _prePauseUIEntryParentActive;
+    private bool _prePauseUIEntryCollectedParentActive;
+    private bool _prePauseCursorImageActive;
+
     private struct AudioState
     {
         public AudioSource source;
@@ -88,15 +92,24 @@ public class PauseManager : MonoBehaviour
         if (pauseAudioSource != null && pauseSound != null)
             pauseAudioSource.PlayOneShot(pauseSound);
 
-        // Hide game HUD elements
+        // Hide game HUD elements — but remember what was actually visible
         if (UIController.Instance != null)
         {
             if (UIController.Instance.UIEntryParent != null)
+            {
+                _prePauseUIEntryParentActive = UIController.Instance.UIEntryParent.activeSelf;
                 UIController.Instance.UIEntryParent.SetActive(false);
+            }
             if (UIController.Instance.UIEntryCollectedParent != null)
+            {
+                _prePauseUIEntryCollectedParentActive = UIController.Instance.UIEntryCollectedParent.activeSelf;
                 UIController.Instance.UIEntryCollectedParent.SetActive(false);
+            }
             if (UIController.Instance.CursorImage != null)
+            {
+                _prePauseCursorImageActive = UIController.Instance.CursorImage.gameObject.activeSelf;
                 UIController.Instance.CursorImage.gameObject.SetActive(false);
+            }
         }
 
         // Show pause screen
@@ -145,15 +158,15 @@ public class PauseManager : MonoBehaviour
         if (pauseScreenRoot != null)
             pauseScreenRoot.SetActive(false);
 
-        // Restore game HUD elements
+        // Restore game HUD elements to whatever state they were in before the pause
         if (UIController.Instance != null)
         {
             if (UIController.Instance.UIEntryParent != null)
-                UIController.Instance.UIEntryParent.SetActive(true);
+                UIController.Instance.UIEntryParent.SetActive(_prePauseUIEntryParentActive);
             if (UIController.Instance.UIEntryCollectedParent != null)
-                UIController.Instance.UIEntryCollectedParent.SetActive(true);
+                UIController.Instance.UIEntryCollectedParent.SetActive(_prePauseUIEntryCollectedParentActive);
             if (UIController.Instance.CursorImage != null)
-                UIController.Instance.CursorImage.gameObject.SetActive(true);
+                UIController.Instance.CursorImage.gameObject.SetActive(_prePauseCursorImageActive);
         }
 
         // Re-lock cursor — only when player is in Normal state (not dialogue/cutscene)

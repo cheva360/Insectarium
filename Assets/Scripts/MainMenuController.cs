@@ -37,6 +37,8 @@ public class MainMenuController : MonoBehaviour
     [SerializeField] private GameObject settingsMenuRoot;
     [Tooltip("Image that becomes active when Screen.fullScreen is true.")]
     [SerializeField] private Image fullscreenCheckImage;
+    [Tooltip("The visual slider on the world space canvas — kept in sync with the volume slider.")]
+    [SerializeField] private UnityEngine.UI.Slider worldSpaceVolumeSlider;
 
     // ── Back Button ───────────────────────────────────────────────────────────
     [Header("Back – Camera Return")]
@@ -45,6 +47,10 @@ public class MainMenuController : MonoBehaviour
 
     [Header("Fade")]
     [SerializeField] private float fadeInDuration = 1f;
+
+    [Header("Portals")]
+    [Tooltip("All portal GameObjects to disable during the main menu and re-enable on Start.")]
+    [SerializeField] private GameObject[] portals;
 
     private Coroutine _activeTransition;
     private bool      _inSettings;
@@ -59,8 +65,12 @@ public class MainMenuController : MonoBehaviour
     void Awake()
     {
         Instance = this;
-        IsInMainMenu    = true;
+        IsInMainMenu     = true;
         IsInMenuSequence = true;
+
+        // Disable portals immediately — before any frame is rendered
+        foreach (var portal in portals)
+            if (portal != null) portal.SetActive(false);
     }
 
     void Start()
@@ -133,7 +143,12 @@ public class MainMenuController : MonoBehaviour
     public void OnStartPressed()
     {
         if (_activeTransition != null) return;
-        IsInMainMenu = false; // blocks button clicks and settings escape — lerp still in progress
+        IsInMainMenu = false;
+
+        // Re-enable portals immediately when the player hits Start
+        foreach (var portal in portals)
+            if (portal != null) portal.SetActive(true);
+
         _activeTransition = StartCoroutine(StartTransition());
     }
 
@@ -146,25 +161,24 @@ public class MainMenuController : MonoBehaviour
 
     public void OnSettingsBackPressed()
     {
-        if (_activeTransition != null) return;
+        if (!_inSettings || _activeTransition != null) return;
         _activeTransition = StartCoroutine(SettingsBackTransition());
     }
 
-    /// <summary>Toggles fullscreen and syncs the check image.</summary>
     public void OnFullscreenToggle()
     {
+        if (!_inSettings) return;
         Screen.fullScreen = !Screen.fullScreen;
         if (fullscreenCheckImage != null)
             fullscreenCheckImage.gameObject.SetActive(Screen.fullScreen);
     }
 
-    /// <summary>
-    /// Drives AudioListener.volume — wire to a Slider's OnValueChanged.
-    /// Controls every AudioSource in the scene with a single knob.
-    /// </summary>
     public void OnVolumeChanged(float value)
     {
+        if (!_inSettings) return;
         AudioListener.volume = value;
+        if (worldSpaceVolumeSlider != null)
+            worldSpaceVolumeSlider.value = value;
     }
 
     // ── Transitions ───────────────────────────────────────────────────────────
@@ -205,17 +219,17 @@ public class MainMenuController : MonoBehaviour
     private IEnumerator SettingsTransition()
     {
         // 1. Fade out main menu
-        CanvasGroup cg = mainMenuRoot != null ? mainMenuRoot.GetComponent<CanvasGroup>() : null;
-        if (cg != null)
+        CanvasGroup mainCG = mainMenuRoot != null ? mainMenuRoot.GetComponent<CanvasGroup>() : null;
+        if (mainCG != null)
         {
             float elapsed = 0f;
             while (elapsed < settingsFadeOutDuration)
             {
                 elapsed += Time.deltaTime;
-                cg.alpha = Mathf.Lerp(1f, 0f, elapsed / settingsFadeOutDuration);
+                mainCG.alpha = Mathf.Lerp(1f, 0f, elapsed / settingsFadeOutDuration);
                 yield return null;
             }
-            cg.alpha = 0f;
+            mainCG.alpha = 0f;
         }
 
         // 2. Disable decoder text
@@ -232,9 +246,25 @@ public class MainMenuController : MonoBehaviour
         }
         Player.position = settingsCameraTarget.position;
 
-        // 4. Show settings panel and mark state
+        // 4. Fade settings panel in
         if (settingsMenuRoot != null)
+        {
+            CanvasGroup settingsCG = settingsMenuRoot.GetComponent<CanvasGroup>();
+            if (settingsCG != null) settingsCG.alpha = 0f;
             settingsMenuRoot.SetActive(true);
+
+            if (settingsCG != null)
+            {
+                float elapsed = 0f;
+                while (elapsed < settingsFadeOutDuration)
+                {
+                    elapsed += Time.deltaTime;
+                    settingsCG.alpha = Mathf.Lerp(0f, 1f, elapsed / settingsFadeOutDuration);
+                    yield return null;
+                }
+                settingsCG.alpha = 1f;
+            }
+        }
 
         _inSettings       = true;
         _activeTransition = null;
