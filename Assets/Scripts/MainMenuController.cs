@@ -26,7 +26,7 @@ public class MainMenuController : MonoBehaviour
     // ── Start Button ──────────────────────────────────────────────────────────
     [Header("Start – Player Destination")]
     [SerializeField] private Transform startPlayerTarget;
-    [SerializeField] private float startLerpSpeed = 2f;
+    [SerializeField] private Transform startLookTarget;
     [SerializeField] private float menuFadeOutDuration = 0.8f;
 
     // ── Settings Button ───────────────────────────────────────────────────────
@@ -72,9 +72,11 @@ public class MainMenuController : MonoBehaviour
         IsInMainMenu     = true;
         IsInMenuSequence = true;
 
-        // Disable portals immediately — before any frame is rendered
         foreach (var portal in portals)
             if (portal != null) portal.SetActive(false);
+
+        if (settingsMenuRoot != null)
+            settingsMenuRoot.SetActive(false);
     }
 
     void Start()
@@ -192,10 +194,10 @@ public class MainMenuController : MonoBehaviour
 
     private IEnumerator StartTransition()
     {
-        // Enable radar UI now so it starts sweeping during the walk-in lerp
         if (radarUIRoot != null)
             radarUIRoot.SetActive(true);
 
+        // 1. Fade out menu UI
         CanvasGroup cg = mainMenuRoot != null ? mainMenuRoot.GetComponent<CanvasGroup>() : null;
         if (cg != null)
         {
@@ -209,16 +211,44 @@ public class MainMenuController : MonoBehaviour
             cg.alpha = 0f;
         }
 
-        bool rotationDone = false;
-        while (!rotationDone || Vector3.Distance(Player.position, startPlayerTarget.position) > 0.02f)
+        // 2. Fade screen to black
+        float fadeElapsed = 0f;
+        while (fadeElapsed < menuFadeOutDuration)
         {
-            rotationDone = playerController.Instance.LerpCameraTowardsTarget(startPlayerTarget, startLerpSpeed);
-            Player.position = Vector3.Lerp(Player.position, startPlayerTarget.position, startLerpSpeed * Time.deltaTime);
+            fadeElapsed += Time.deltaTime;
+            UIController.Instance.Fade.color = new Color(0f, 0f, 0f, Mathf.Clamp01(fadeElapsed / menuFadeOutDuration));
             yield return null;
         }
+        UIController.Instance.Fade.color = new Color(0f, 0f, 0f, 1f);
 
+        // 3. Teleport player and snap camera rotation toward look target
         Player.position = startPlayerTarget.position;
-        // radarHidden is now cleared by Portal.TeleportPlayer() instead
+
+        if (startLookTarget != null)
+        {
+            Vector3 dir = (startLookTarget.position - startPlayerTarget.position).normalized;
+
+            float yaw = Quaternion.LookRotation(dir, Vector3.up).eulerAngles.y;
+            Player.rotation = Quaternion.Euler(0f, yaw, 0f);
+
+            float pitch = -Mathf.Asin(Mathf.Clamp(dir.y, -1f, 1f)) * Mathf.Rad2Deg;
+            playerController.Instance.SetVerticalRotation(pitch);
+        }
+        else
+        {
+            Player.rotation = startPlayerTarget.rotation;
+        }
+
+        // 4. Fade screen back in
+        fadeElapsed = 0f;
+        while (fadeElapsed < fadeInDuration)
+        {
+            fadeElapsed += Time.deltaTime;
+            UIController.Instance.Fade.color = new Color(0f, 0f, 0f, 1f - Mathf.Clamp01(fadeElapsed / fadeInDuration));
+            yield return null;
+        }
+        UIController.Instance.Fade.color = new Color(0f, 0f, 0f, 0f);
+
         EnterGameplay();
         _activeTransition = null;
     }
@@ -298,6 +328,9 @@ public class MainMenuController : MonoBehaviour
         // 1. Hide settings panel
         if (settingsMenuRoot != null)
             settingsMenuRoot.SetActive(false);
+
+        if (radarUIRoot != null)
+            radarUIRoot.SetActive(false);
 
         // 2. Lerp player position and camera back to snapshotted main-menu state
         bool rotationDone = false;

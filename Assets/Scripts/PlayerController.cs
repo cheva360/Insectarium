@@ -577,4 +577,13 @@ public class playerController : MonoBehaviour
             radar3DModel.localPosition = pos;
         }
     }
+
+    /// <summary>
+    /// Instantly snaps the camera's vertical (pitch) rotation to the given angle in degrees.
+    /// </summary>
+    public void SetVerticalRotation(float degrees)
+    {
+        verticalRotation = Mathf.Clamp(degrees, -maxLookAngle, maxLookAngle);
+        cameraTransform.localRotation = Quaternion.Euler(verticalRotation, 0f, 0f);
+    }
 }

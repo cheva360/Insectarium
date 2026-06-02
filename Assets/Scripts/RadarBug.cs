@@ -5,7 +5,7 @@ using UnityEngine.UI;
 public class RadarBug : MonoBehaviour
 {
     private float _interactionDistance = 3f;
-    private float _lookAtRadius = 0.1f;
+    private float _lookAtRadius = 0.5f;
 
     [SerializeField] private Transform cameraLookTarget;
     [SerializeField] private Transform playerLerpTarget;
