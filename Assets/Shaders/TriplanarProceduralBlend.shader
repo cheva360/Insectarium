@@ -74,6 +74,7 @@ Shader "Custom/TriplanarProceduralBlend"
             #pragma multi_compile _ _ADDITIONAL_LIGHTS
             #pragma multi_compile _ _ADDITIONAL_LIGHT_SHADOWS
             #pragma multi_compile _ _SHADOWS_SOFT
+            #pragma multi_compile _ _FORWARD_PLUS
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -325,13 +326,20 @@ Shader "Custom/TriplanarProceduralBlend"
                 half3 lighting = ambient + (mainLight.color * mainNdotL * mainLight.distanceAttenuation * mainLight.shadowAttenuation);
 
                 #if defined(_ADDITIONAL_LIGHTS)
+                InputData inputData = (InputData)0;
+                inputData.positionWS = worldPos;
+                inputData.normalWS = worldNormal;
+                inputData.viewDirectionWS = GetWorldSpaceNormalizeViewDir(worldPos);
+                inputData.shadowCoord = IN.shadowCoord;
+                inputData.positionCS = IN.positionHCS;
+                inputData.normalizedScreenSpaceUV = GetNormalizedScreenSpaceUV(IN.positionHCS);
+
                 uint lightCount = GetAdditionalLightsCount();
-                for (uint i = 0u; i < lightCount; ++i)
-                {
-                    Light light = GetAdditionalLight(i, worldPos);
+                LIGHT_LOOP_BEGIN(lightCount)
+                    Light light = GetAdditionalLight(lightIndex, worldPos);
                     half ndotl = saturate(dot(worldNormal, light.direction));
                     lighting += light.color * ndotl * light.distanceAttenuation * light.shadowAttenuation;
-                }
+                LIGHT_LOOP_END
                 #endif
 
                 half3 finalColor = albedo * lighting;

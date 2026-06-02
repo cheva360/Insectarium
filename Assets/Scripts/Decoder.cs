@@ -181,8 +181,8 @@ public class Decoder : MonoBehaviour
             // ── Phase 2: mouse-driven cassette slide ──────────────────────────
             if (cassette != null)
             {
-                float startZ = cassetteResetPos.z;
-                float endZ   = startZ + 1.5f;
+                float startX = cassetteResetPos.x;   // ~2  (furthest out)
+                float endX   = -0.15f;                // fully inserted
                 bool cockroachTriggered = false;
                 bool flapSoundTriggered = false;
 
@@ -193,10 +193,10 @@ public class Decoder : MonoBehaviour
                     float delta  = (mouseX * -1f + mouseY) * 0.5f * cassetteMouseSensitivity;
 
                     Vector3 lp = cassette.transform.localPosition;
-                    lp.z = Mathf.Clamp(lp.z + delta, startZ, endZ);
+                    lp.x = Mathf.Clamp(lp.x - delta, endX, startX);
                     cassette.transform.localPosition = lp;
 
-                    float progress = Mathf.InverseLerp(startZ, endZ, lp.z);
+                    float progress = Mathf.InverseLerp(startX, endX, lp.x);
 
                     if (cassetteRenderer != null)
                     {
@@ -234,7 +234,7 @@ public class Decoder : MonoBehaviour
                         }
                     }
 
-                    if (lp.z >= endZ)
+                    if (lp.x <= endX)
                     {
                         if (cassetteAudioSource != null && cassetteInsertedClip != null)
                             cassetteAudioSource.PlayOneShot(cassetteInsertedClip);
