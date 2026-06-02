@@ -16,6 +16,12 @@ Shader "Custom/PSXLit"
         
         [HDR] _EmissionColor("Emission Color", Color) = (1,1,1,1)
         [NoScaleOffset] _EmissionMap("Emission Map", 2D) = "white" {}
+        
+        _WaveSize ("Wave Size", Float) = 1
+        _WaveLength ("Wave Length", Float) = 1
+        _Frequency ("Frequency", Float) = 1
+        _MinY ("Min Y", Float) = 0
+        _MaxY ("Max Y", Float) = 1
     }
 
     SubShader
@@ -40,7 +46,6 @@ Shader "Custom/PSXLit"
             #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile _ _ADDITIONAL_LIGHT_SHADOWS
-            #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -82,6 +87,12 @@ Shader "Custom/PSXLit"
                 half4 _DiffuseColor;
                 float _SpecularExponent;
                 float4 _k;
+            
+                float _WaveSize;
+                float _WaveLength;
+                float _Frequency;
+                float _MinY;
+                float _MaxY;
             CBUFFER_END
 
             float2 snapToGrid(float2 value, float snapValue)
@@ -117,10 +128,15 @@ Shader "Custom/PSXLit"
                 Varyings OUT;
 
                 float4 worldPosition = mul(UNITY_MATRIX_MV, IN.positionOS);
+                
+                float waveAmplitude = _WaveSize *  clamp((IN.positionOS.y - _MinY) / (_MaxY - _MinY), 0, 1);
+
+                IN.positionOS.x += sin((IN.positionOS.y + _Time * _Frequency) / _WaveLength) * waveAmplitude;
 
                 OUT.positionHCS = TransformObjectToHClip(IN.positionOS.xyz);
                 OUT.positionWS = TransformObjectToWorld(IN.positionOS.xyz);
                 OUT.normal = IN.normal;
+                
                 
                 InputData inputData = (InputData)0;
                 inputData.positionWS = OUT.positionWS;
@@ -154,8 +170,6 @@ Shader "Custom/PSXLit"
                 // additional lights
                 #if defined(_ADDITIONAL_LIGHTS)
                 
-                uint lightsCount = GetAdditionalLightsCount();
-
                 #if USE_CLUSTER_LIGHT_LOOP
                 UNITY_LOOP for (uint lightIndex = 0; lightIndex < MAX_VISIBLE_LIGHTS; lightIndex++)
                 {
@@ -167,6 +181,8 @@ Shader "Custom/PSXLit"
                     }
                 }
                 #endif
+                
+                uint lightsCount = GetAdditionalLightsCount();
 
                 LIGHT_LOOP_BEGIN(lightsCount)
                     Light additionalLight = GetAdditionalLight(lightIndex, vertexInput.positionWS);
