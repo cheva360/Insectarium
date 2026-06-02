@@ -17,6 +17,11 @@ public class PauseMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExit
     [SerializeField] private float bobDistance = 8f;
     [SerializeField] private float bobSpeed    = 4f;
 
+    [Header("Audio")]
+    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private AudioClip   hoverSound;
+    [SerializeField] private AudioClip   clickSound;
+
     private Coroutine _bobCoroutine;
     private Vector2   _promptOrigin;
 
@@ -42,6 +47,9 @@ public class PauseMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExit
     {
         if (!PauseManager.IsPaused) return;
 
+        if (audioSource != null && hoverSound != null)
+            audioSource.PlayOneShot(hoverSound);
+
         if (selectPrompt != null)
         {
             selectPrompt.SetActive(true);
@@ -60,6 +68,9 @@ public class PauseMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExit
     public void OnPointerClick(PointerEventData eventData)
     {
         if (!PauseManager.IsPaused) return;
+
+        if (audioSource != null && clickSound != null)
+            audioSource.PlayOneShot(clickSound);
 
         if (isResumeButton && PauseManager.Instance != null)
             PauseManager.Instance.Unpause();

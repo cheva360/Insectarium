@@ -399,17 +399,18 @@ public class Portal : MonoBehaviour
 
     private void StartClosureSequence()
     {
-        if (_doorAnimationStarted || door == null || linkedPortal == null)
-            return;
-
+        if (_doorAnimationStarted) return;
         _doorAnimationStarted = true;
         StartCoroutine(AnimateClosureSequence());
     }
 
     private IEnumerator AnimateClosureSequence()
     {
-        yield return AnimateDoorOpen();
-        yield return ShrinkExitPortalFromTopToBottom();
+        if (door != null)
+            yield return AnimateDoorOpen();
+
+        if (linkedPortal != null)
+            yield return ShrinkExitPortalFromTopToBottom();
     }
 
     private IEnumerator AnimateDoorOpen()
