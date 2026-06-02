@@ -22,8 +22,13 @@ public class PauseMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExit
 
     void OnEnable()
     {
+        // Capture the resting position now, before any bob can offset it
         if (selectPrompt != null)
+        {
+            RectTransform rt = selectPrompt.GetComponent<RectTransform>();
+            if (rt != null) _promptOrigin = rt.anchoredPosition;
             selectPrompt.SetActive(false);
+        }
     }
 
     void OnDisable()
@@ -69,7 +74,8 @@ public class PauseMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExit
         RectTransform rt = selectPrompt.GetComponent<RectTransform>();
         if (rt == null) return;
 
-        _promptOrigin = rt.anchoredPosition;
+        // Reset to resting position before starting so Sin starts from the correct base
+        rt.anchoredPosition = _promptOrigin;
         if (_bobCoroutine != null) StopCoroutine(_bobCoroutine);
         _bobCoroutine = StartCoroutine(BobCoroutine(rt));
     }
