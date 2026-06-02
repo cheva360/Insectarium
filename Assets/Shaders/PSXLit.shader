@@ -29,7 +29,8 @@ Shader "Custom/PSXLit"
             Cull Off
             ZWrite On
             ZTest LEqual
-
+            AlphaToMask On
+            
             HLSLPROGRAM
 
             #pragma vertex vert
