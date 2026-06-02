@@ -40,6 +40,7 @@ Shader "Custom/PSXLit"
             #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile _ _ADDITIONAL_LIGHT_SHADOWS
+            #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -119,6 +120,13 @@ Shader "Custom/PSXLit"
 
                 OUT.positionHCS = TransformObjectToHClip(IN.positionOS.xyz);
                 OUT.positionWS = TransformObjectToWorld(IN.positionOS.xyz);
+                OUT.normal = IN.normal;
+                
+                InputData inputData = (InputData)0;
+                inputData.positionWS = OUT.positionWS;
+                inputData.normalWS = OUT.normal;
+                inputData.viewDirectionWS = GetWorldSpaceNormalizeViewDir(OUT.positionWS);
+                inputData.normalizedScreenSpaceUV = GetNormalizedScreenSpaceUV(OUT.positionHCS);
 
                 // vert snapping
                 if (_SnapIntensity != 0)
@@ -144,7 +152,21 @@ Shader "Custom/PSXLit"
                 OUT.color = half4(LightingFunc(worldPosition, light, n, shadow_amt), 1.0);
 
                 // additional lights
+                #if defined(_ADDITIONAL_LIGHTS)
+                
                 uint lightsCount = GetAdditionalLightsCount();
+
+                #if USE_CLUSTER_LIGHT_LOOP
+                UNITY_LOOP for (uint lightIndex = 0; lightIndex < MAX_VISIBLE_LIGHTS; lightIndex++)
+                {
+                    Light additionalLight = GetAdditionalLight(lightIndex, vertexInput.positionWS);
+                    shadow_amt = AdditionalLightRealtimeShadow(lightIndex, vertexInput.positionWS, additionalLight.direction);
+                    {
+                        half3 lightColor = additionalLight.color * additionalLight.distanceAttenuation;
+                        OUT.color += half4(LotusLambert(lightColor, additionalLight.direction, normalInput.normalWS, shadow_amt), 1.0);
+                    }
+                }
+                #endif
 
                 LIGHT_LOOP_BEGIN(lightsCount)
                     Light additionalLight = GetAdditionalLight(lightIndex, vertexInput.positionWS);
@@ -155,8 +177,9 @@ Shader "Custom/PSXLit"
                     }
                 LIGHT_LOOP_END
 
+                #endif
+                
                 OUT.shadowCoords = GetShadowCoord(vertexInput);
-                OUT.normal = IN.normal;
 
                 return OUT;
             }
