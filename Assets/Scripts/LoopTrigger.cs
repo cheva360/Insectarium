@@ -112,20 +112,14 @@ public class LoopTrigger : MonoBehaviour
         }
         UIController.Instance.Fade.color = new Color(0, 0, 0, 1);
         UIController.Instance.ShakeMagnitude = 0f;
-        //set rotation to 0
         playerController.Instance.transform.eulerAngles = new Vector3(0f, -90f, 0f);
-        //reset move speed
         playerController.Instance.moveSpeed = 3.5f;
-        //reset effects
         dof.focalLength.value = 0f;
         motionBlur.intensity.value = 0f;
-        //reset camera shake
         UIController.Instance.ShakeMagnitude = 0f;
 
-        //wait for 5 seconds
-        yield return new WaitForSeconds(5f);
+        yield return StartCoroutine(LoadingScreenController.Instance.Play());
         StartCoroutine(FadeInCoroutine());
-
     }
 
     IEnumerator FadeInCoroutine()

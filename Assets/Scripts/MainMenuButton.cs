@@ -1,0 +1,116 @@
+using System.Collections;
+using UnityEngine;
+using UnityEngine.EventSystems;
+
+public class MainMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
+{
+    [Tooltip("The '►' or select indicator to the left of this button's label.")]
+    [SerializeField] private GameObject selectPrompt;
+
+    [Tooltip("The action this button performs.")]
+    [SerializeField] private ButtonAction action = ButtonAction.None;
+
+    public enum ButtonAction { None, Start, Settings }
+
+    [Header("Arrow Bob")]
+    [SerializeField] private float bobDistance = 8f;
+    [SerializeField] private float bobSpeed    = 4f;
+
+    private Coroutine _bobCoroutine;
+    private Vector2   _promptOrigin;
+
+    void OnEnable()
+    {
+        if (selectPrompt != null)
+            selectPrompt.SetActive(false);
+    }
+
+    void OnDisable()
+    {
+        StopBob();
+        if (selectPrompt != null)
+            selectPrompt.SetActive(false);
+    }
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        if (!MainMenuController.IsInMainMenu) return;
+
+        if (selectPrompt != null)
+        {
+            selectPrompt.SetActive(true);
+            StartBob();
+        }
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        StopBob();
+
+        if (selectPrompt != null)
+            selectPrompt.SetActive(false);
+    }
+
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        if (!MainMenuController.IsInMainMenu) return;
+        if (MainMenuController.Instance == null) return;
+
+        switch (action)
+        {
+            case ButtonAction.Start:
+                MainMenuController.Instance.OnStartPressed();
+                break;
+            case ButtonAction.Settings:
+                MainMenuController.Instance.OnSettingsPressed();
+                break;
+        }
+    }
+
+    private void StartBob()
+    {
+        if (selectPrompt == null) return;
+        RectTransform rt = selectPrompt.GetComponent<RectTransform>();
+        if (rt == null) return;
+
+        _promptOrigin = rt.anchoredPosition;
+        if (_bobCoroutine != null) StopCoroutine(_bobCoroutine);
+        _bobCoroutine = StartCoroutine(BobCoroutine(rt));
+    }
+
+    private void StopBob()
+    {
+        if (_bobCoroutine != null)
+        {
+            StopCoroutine(_bobCoroutine);
+            _bobCoroutine = null;
+        }
+
+        if (selectPrompt != null)
+        {
+            RectTransform rt = selectPrompt.GetComponent<RectTransform>();
+            if (rt != null) rt.anchoredPosition = _promptOrigin;
+        }
+    }
+
+    private IEnumerator BobCoroutine(RectTransform rt)
+    {
+        float t = 0f;
+        while (true)
+        {
+            t += Time.unscaledDeltaTime * bobSpeed;
+            rt.anchoredPosition = _promptOrigin + new Vector2(Mathf.Sin(t) * bobDistance, 0f);
+            yield return null;
+        }
+    }
+
+    void Update()
+    {
+        // If state changed while hovering, force-hide the prompt
+        if (!MainMenuController.IsInMainMenu && selectPrompt != null && selectPrompt.activeSelf)
+        {
+            StopBob();
+            selectPrompt.SetActive(false);
+        }
+    }
+}

@@ -1,0 +1,119 @@
+using System.Collections;
+using UnityEngine;
+using UnityEngine.EventSystems;
+
+public class PauseMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
+{
+    [Tooltip("The '►' or select indicator to the left of this button's label.")]
+    [SerializeField] private GameObject selectPrompt;
+
+    [Tooltip("If true, clicking this button calls PauseManager.Unpause().")]
+    [SerializeField] private bool isResumeButton = false;
+
+    [Tooltip("If true, clicking this button calls PauseManager.QuitToMenu().")]
+    [SerializeField] private bool isQuitToMenuButton = false;
+
+    [Header("Arrow Bob")]
+    [SerializeField] private float bobDistance = 8f;
+    [SerializeField] private float bobSpeed    = 4f;
+
+    private Coroutine _bobCoroutine;
+    private Vector2   _promptOrigin;
+
+    void OnEnable()
+    {
+        // Capture the resting position now, before any bob can offset it
+        if (selectPrompt != null)
+        {
+            RectTransform rt = selectPrompt.GetComponent<RectTransform>();
+            if (rt != null) _promptOrigin = rt.anchoredPosition;
+            selectPrompt.SetActive(false);
+        }
+    }
+
+    void OnDisable()
+    {
+        StopBob();
+        if (selectPrompt != null)
+            selectPrompt.SetActive(false);
+    }
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        if (!PauseManager.IsPaused) return;
+
+        if (selectPrompt != null)
+        {
+            selectPrompt.SetActive(true);
+            StartBob();
+        }
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        StopBob();
+
+        if (selectPrompt != null)
+            selectPrompt.SetActive(false);
+    }
+
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        if (!PauseManager.IsPaused) return;
+
+        if (isResumeButton && PauseManager.Instance != null)
+            PauseManager.Instance.Unpause();
+
+        if (isQuitToMenuButton && PauseManager.Instance != null)
+            PauseManager.Instance.QuitToMenu();
+    }
+
+    private void StartBob()
+    {
+        if (selectPrompt == null) return;
+        RectTransform rt = selectPrompt.GetComponent<RectTransform>();
+        if (rt == null) return;
+
+        // Reset to resting position before starting so Sin starts from the correct base
+        rt.anchoredPosition = _promptOrigin;
+        if (_bobCoroutine != null) StopCoroutine(_bobCoroutine);
+        _bobCoroutine = StartCoroutine(BobCoroutine(rt));
+    }
+
+    private void StopBob()
+    {
+        if (_bobCoroutine != null)
+        {
+            StopCoroutine(_bobCoroutine);
+            _bobCoroutine = null;
+        }
+
+        // Reset arrow to origin position
+        if (selectPrompt != null)
+        {
+            RectTransform rt = selectPrompt.GetComponent<RectTransform>();
+            if (rt != null) rt.anchoredPosition = _promptOrigin;
+        }
+    }
+
+    private IEnumerator BobCoroutine(RectTransform rt)
+    {
+        float t = 0f;
+        while (true)
+        {
+            t += Time.unscaledDeltaTime * bobSpeed;
+            rt.anchoredPosition = _promptOrigin + new Vector2(Mathf.Sin(t) * bobDistance, 0f);
+            yield return null;
+        }
+    }
+
+    void Update()
+    {
+        // If state changed while hovering, force-hide the prompt
+        if (!PauseManager.IsPaused && selectPrompt != null && selectPrompt.activeSelf)
+        {
+            StopBob();
+            selectPrompt.SetActive(false);
+        }
+    }
+}

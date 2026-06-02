@@ -19,7 +19,8 @@ public class playerController : MonoBehaviour
         Normal,      // Can move, interact, and enter cutscenes/dialogue
         InDialogue,  // Cannot move camera lerps to npc
         Cutscene,    // Cannot move camera controlled by cutscene
-        Disabled     // no movement or interactions
+        Disabled,    // no movement or interactions
+        Paused       // game is paused — no input processed
     }
 
     [Header("State")]
@@ -52,6 +53,7 @@ public class playerController : MonoBehaviour
 
     [Header("Dialogue Settings")]
     [SerializeField] private float dialogueLookSpeed = 3f;
+    [SerializeField] private float dialogueReturnSpeed = 8f;
     private Transform _dialogueLookTarget;
     private Transform _dialoguePlayerTarget;
     private Vector3 _preDialoguePosition;
@@ -116,8 +118,14 @@ public class playerController : MonoBehaviour
     void Start()
     {
         characterController = GetComponent<CharacterController>();
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+
+        // Don't lock the cursor at startup if the main menu is taking over
+        if (!MainMenuController.IsInMainMenu)
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible   = false;
+        }
+
         playerCamera = cameraTransform.GetComponent<Camera>();
 
         if (_audioSource == null)
@@ -134,9 +142,9 @@ public class playerController : MonoBehaviour
 
         baseMoveSpeed = moveSpeed;
 
-        _cachedScreenWidth = Screen.width;
+        _cachedScreenWidth  = Screen.width;
         _cachedScreenHeight = Screen.height;
-        _cachedAspect = (float)_cachedScreenWidth / _cachedScreenHeight;
+        _cachedAspect       = (float)_cachedScreenWidth / _cachedScreenHeight;
     }
 
     private Vector3 _raycastStart => cameraTransform.position;
@@ -144,6 +152,9 @@ public class playerController : MonoBehaviour
 
     void Update()
     {
+        // Block all player input and processing while paused
+        if (PauseManager.IsPaused) return;
+
         //esc to unlock cursor for debuggging
         if (Input.GetMouseButtonDown(0) && Application.isFocused)
         {
@@ -185,9 +196,9 @@ public class playerController : MonoBehaviour
         }
     }
 
-    public void EnterDialogue(Transform lookTarget, Transform playerTarget = null)
+    public void EnterDialogue(Transform lookTarget, Transform playerTarget = null, Vector3? originalPosition = null)
     {
-        _preDialoguePosition = transform.position;
+        _preDialoguePosition = originalPosition ?? transform.position;
         _preDialogueRotation = transform.rotation;
         _preDialogueVerticalRotation = verticalRotation;
 
@@ -213,9 +224,9 @@ public class playerController : MonoBehaviour
                Quaternion.Angle(transform.rotation, _preDialogueRotation) > 0.5f ||
                Mathf.Abs(verticalRotation - _preDialogueVerticalRotation) > 0.5f)
         {
-            transform.position = Vector3.Lerp(transform.position, _preDialoguePosition, dialogueLookSpeed * Time.deltaTime);
-            transform.rotation = Quaternion.Slerp(transform.rotation, _preDialogueRotation, dialogueLookSpeed * Time.deltaTime);
-            verticalRotation = Mathf.Lerp(verticalRotation, _preDialogueVerticalRotation, dialogueLookSpeed * Time.deltaTime);
+            transform.position = Vector3.Lerp(transform.position, _preDialoguePosition, dialogueReturnSpeed * Time.deltaTime);
+            transform.rotation = Quaternion.Slerp(transform.rotation, _preDialogueRotation, dialogueReturnSpeed * Time.deltaTime);
+            verticalRotation = Mathf.Lerp(verticalRotation, _preDialogueVerticalRotation, dialogueReturnSpeed * Time.deltaTime);
             cameraTransform.localRotation = Quaternion.Euler(verticalRotation, 0f, 0f);
             yield return null;
         }
@@ -292,6 +303,11 @@ public class playerController : MonoBehaviour
                 _dialoguePlayerTarget = null;
                 Cursor.lockState = CursorLockMode.Locked;
                 Cursor.visible = false;
+                break;
+
+            case playerState.Cutscene:
+            case playerState.Disabled:
+                characterController.enabled = true;
                 break;
         }
     }
@@ -527,5 +543,22 @@ public class playerController : MonoBehaviour
 
         // Reset vertical velocity so accumulated gravity doesn't snap the player.
         velocity.y = -2f;
+    }
+
+    /// <summary>
+    /// Instantly snaps the radar model to the fully hidden position with no lerp.
+    /// Call this before the first frame to avoid the slide-in on scene load.
+    /// </summary>
+    public void SnapRadarToHidden()
+    {
+        radarHidden    = true;
+        _radarCurrentY = -0.8f;
+
+        if (radar3DModel != null)
+        {
+            Vector3 pos = radar3DModel.localPosition;
+            pos.y = _radarCurrentY;
+            radar3DModel.localPosition = pos;
+        }
     }
 }
