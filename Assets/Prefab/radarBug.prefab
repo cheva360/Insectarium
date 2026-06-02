@@ -781,6 +781,12 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 723798240889091966}
   m_SourcePrefab: {fileID: 100100000, guid: 8badd779fe0e82f448e37fc142f04d9d, type: 3}
+--- !u!1 &3243910037746874724 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7261693358951798987, guid: 8badd779fe0e82f448e37fc142f04d9d,
+    type: 3}
+  m_PrefabInstance: {fileID: 5314838396451643823}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &4972942165095636222 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 8badd779fe0e82f448e37fc142f04d9d,
@@ -825,6 +831,10 @@ MonoBehaviour:
   playerLerpTarget: {fileID: 5064753253853389238}
   cameraLerpSpeed: 3
   cameraReturnLerpSpeed: 4.5
+  handAnimator: {fileID: 6710892249583356030}
+  animationTrigger: OpenHand
+  animationDuration: 10
+  collectibleObject: {fileID: 3243910037746874724}
 --- !u!65 &723798240889091966
 BoxCollider:
   m_ObjectHideFlags: 0
