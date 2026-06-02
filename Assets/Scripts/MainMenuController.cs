@@ -102,7 +102,7 @@ public class MainMenuController : MonoBehaviour
             if (UIController.Instance.UIEntryCollectedParent != null)
                 UIController.Instance.UIEntryCollectedParent.SetActive(false);
             if (UIController.Instance.CursorImage != null)
-                UIController.Instance.CursorImage.gameObject.SetActive(false);
+                UIController.Instance.CursorImage.gameObject.SetActive(true);
         }
 
         if (radarUIRoot != null)
@@ -171,6 +171,10 @@ public class MainMenuController : MonoBehaviour
 
     private IEnumerator StartTransition()
     {
+        // Enable radar UI now so it starts sweeping during the walk-in lerp
+        if (radarUIRoot != null)
+            radarUIRoot.SetActive(true);
+
         CanvasGroup cg = mainMenuRoot != null ? mainMenuRoot.GetComponent<CanvasGroup>() : null;
         if (cg != null)
         {
@@ -193,7 +197,7 @@ public class MainMenuController : MonoBehaviour
         }
 
         Player.position = startPlayerTarget.position;
-        playerController.Instance.radarHidden = false;
+        // radarHidden is now cleared by Portal.TeleportPlayer() instead
         EnterGameplay();
         _activeTransition = null;
     }
@@ -284,23 +288,25 @@ public class MainMenuController : MonoBehaviour
     private void EnterGameplay()
     {
         IsInMainMenu     = false;
-        IsInMenuSequence = false; // ← pause now allowed for the first time
+        IsInMenuSequence = false;
 
         if (mainMenuRoot != null)
             mainMenuRoot.SetActive(false);
 
         if (UIController.Instance != null)
         {
+            // Keep entry UI hidden — Portal.TeleportPlayer() fades them in
             if (UIController.Instance.UIEntryParent != null)
-                UIController.Instance.UIEntryParent.SetActive(true);
+                UIController.Instance.UIEntryParent.SetActive(false);
             if (UIController.Instance.UIEntryCollectedParent != null)
-                UIController.Instance.UIEntryCollectedParent.SetActive(true);
+                UIController.Instance.UIEntryCollectedParent.SetActive(false);
+            // Crosshair activates immediately
             if (UIController.Instance.CursorImage != null)
                 UIController.Instance.CursorImage.gameObject.SetActive(true);
         }
 
-        if (radarUIRoot != null)
-            radarUIRoot.SetActive(true);
+        // radarUIRoot already activated at the start of StartTransition
+        // radarHidden already cleared by Portal.TeleportPlayer()
 
         if (playerController.Instance != null)
             playerController.Instance.SetState(playerController.playerState.Normal);

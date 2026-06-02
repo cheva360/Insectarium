@@ -9,6 +9,7 @@ public class PauseManager : MonoBehaviour
 {
     public static PauseManager Instance { get; private set; }
     public static bool IsPaused { get; private set; }
+    public static bool IsQuittingToMenu { get; private set; }
 
     [Header("Pause UI")]
     [Tooltip("Root GameObject that contains all pause screen UI elements.")]
@@ -236,6 +237,7 @@ public class PauseManager : MonoBehaviour
     {
         // Restore timeScale immediately so deltaTime-driven effects run
         IsPaused = false;
+        IsQuittingToMenu = true;
         Time.timeScale = 1f;
 
         foreach (var state in _savedAudio)
@@ -291,6 +293,7 @@ public class PauseManager : MonoBehaviour
 
         yield return StartCoroutine(LoadingScreenController.Instance.Play());
 
+        IsQuittingToMenu = false;
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 }

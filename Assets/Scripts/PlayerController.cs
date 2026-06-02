@@ -38,6 +38,8 @@ public class playerController : MonoBehaviour
     [SerializeField] private Transform cameraTransform;
     [SerializeField] private float maxLookAngle = 80f;
     [SerializeField] private Transform radar3DModel;
+    [SerializeField] private bool lockCameraLocalY = true;
+    [SerializeField] private float lockedCameraLocalY = 0.85f;
 
     [Header("Radar Animation Settings")]
     [SerializeField] private float radarSwayAmount = 0.05f;
@@ -145,6 +147,11 @@ public class playerController : MonoBehaviour
         _cachedScreenWidth  = Screen.width;
         _cachedScreenHeight = Screen.height;
         _cachedAspect       = (float)_cachedScreenWidth / _cachedScreenHeight;
+
+        // Sync CharacterController enabled state with the serialized initial state.
+        // This prevents a one-frame Move() call on an inactive controller when
+        // the prefab's CC checkbox and currentState are out of sync.
+        characterController.enabled = (currentState == playerState.Normal || currentState == playerState.InDialogue);
     }
 
     private Vector3 _raycastStart => cameraTransform.position;
@@ -194,6 +201,15 @@ public class playerController : MonoBehaviour
             case playerState.Disabled:
                 break;
         }
+    }
+
+    void LateUpdate()
+    {
+        if (!lockCameraLocalY || cameraTransform == null) return;
+
+        Vector3 localPos = cameraTransform.localPosition;
+        localPos.y = lockedCameraLocalY;
+        cameraTransform.localPosition = localPos;
     }
 
     public void EnterDialogue(Transform lookTarget, Transform playerTarget = null, Vector3? originalPosition = null)

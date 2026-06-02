@@ -28,10 +28,14 @@ public class UIController : MonoBehaviour
     [Header("Entry Fill-Out")]
     [Tooltip("How long (seconds) the latest entry and its backing take to fade their fill from 1 to 0 on cassette insert.")]
     public float EntryFillOutDuration = 0.6f;
+    [Header("Entry UI Fade-In")]
+    [Tooltip("Duration in seconds for the entry UI panels to fade in after portal travel.")]
+    [SerializeField] private float entryUIFadeInDuration = 0.5f;
 
     private MonoBehaviour _currentInteractable;
     private Coroutine _decoderTypewriterCoroutine;
     private Coroutine _cursorCoroutine;
+    private Coroutine _entryFadeCoroutine;
     private bool _isTyping = false;
     private List<string> _committedChunks = new List<string>();
     private string _currentChunk = "";
@@ -362,5 +366,42 @@ public class UIController : MonoBehaviour
 
         if (CursorImage != null)
             CursorImage.enabled = !hideUI;
+    }
+
+    /// <summary>
+    /// Fades UIEntryParent and UIEntryCollectedParent in using a CanvasGroup.
+    /// Requires a CanvasGroup on each parent object.
+    /// </summary>
+    public void FadeInEntryUI()
+    {
+        if (_entryFadeCoroutine != null) StopCoroutine(_entryFadeCoroutine);
+        _entryFadeCoroutine = StartCoroutine(FadeInEntryUICoroutine());
+    }
+
+    private IEnumerator FadeInEntryUICoroutine()
+    {
+        CanvasGroup cgEntry     = UIEntryParent         != null ? UIEntryParent.GetComponent<CanvasGroup>()         : null;
+        CanvasGroup cgCollected = UIEntryCollectedParent != null ? UIEntryCollectedParent.GetComponent<CanvasGroup>() : null;
+
+        if (UIEntryParent != null)         UIEntryParent.SetActive(true);
+        if (UIEntryCollectedParent != null) UIEntryCollectedParent.SetActive(true);
+
+        if (cgEntry     != null) cgEntry.alpha     = 0f;
+        if (cgCollected != null) cgCollected.alpha = 0f;
+
+        float elapsed = 0f;
+        while (elapsed < entryUIFadeInDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / entryUIFadeInDuration);
+            if (cgEntry     != null) cgEntry.alpha     = t;
+            if (cgCollected != null) cgCollected.alpha = t;
+            yield return null;
+        }
+
+        if (cgEntry     != null) cgEntry.alpha     = 1f;
+        if (cgCollected != null) cgCollected.alpha = 1f;
+
+        _entryFadeCoroutine = null;
     }
 }

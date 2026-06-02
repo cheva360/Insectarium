@@ -263,6 +263,12 @@ public class Portal : MonoBehaviour
 
         pc.OnPortalTeleport();
 
+        // Lerp the radar 3D model in now that the player has passed through
+        pc.radarHidden = false;
+
+        if (UIController.Instance != null)
+            UIController.Instance.FadeInEntryUI();
+
         linkedPortal.RenderPortalCamera();
 
         DisablePortalPair();

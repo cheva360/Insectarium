@@ -697,6 +697,7 @@ GameObject:
   - component: {fileID: 2067112332139920260}
   - component: {fileID: 488849492007772794}
   - component: {fileID: 4454306731353995066}
+  - component: {fileID: 2949543948365679654}
   m_Layer: 5
   m_Name: AudioFileList
   m_TagString: Untagged
@@ -757,6 +758,18 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!225 &2949543948365679654
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1354204528986608939}
+  m_Enabled: 1
+  m_Alpha: 0
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &1463163187043747770
 GameObject:
   m_ObjectHideFlags: 0
@@ -3122,6 +3135,7 @@ MonoBehaviour:
   ShakeMagnitude: 0
   DecoderAudioSource: {fileID: 0}
   EntryFillOutDuration: 0.6
+  entryUIFadeInDuration: 0.5
   CursorBlinkRate: 0.5
 --- !u!114 &3008634871279570999
 MonoBehaviour:
@@ -3252,6 +3266,7 @@ GameObject:
   - component: {fileID: 3617162392775116787}
   - component: {fileID: 7311533076977070154}
   - component: {fileID: 5753772573764828028}
+  - component: {fileID: 7794659099608175428}
   m_Layer: 5
   m_Name: AudioFileListBacking
   m_TagString: Untagged
@@ -3312,6 +3327,18 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!225 &7794659099608175428
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8881188222136537694}
+  m_Enabled: 1
+  m_Alpha: 0
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &8959141436158285136
 GameObject:
   m_ObjectHideFlags: 0
