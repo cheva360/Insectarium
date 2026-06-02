@@ -26,6 +26,24 @@ public class Radar : MonoBehaviour
     [SerializeField] private float rotationSpeed = 30f;      // degrees per second
     [SerializeField] private int targetFPS = 30;             // radar LINE visual update rate
 
+    private Coroutine _radarLineCoroutine;
+
+    void OnEnable()
+    {
+        if (_radarLineCoroutine != null)
+            StopCoroutine(_radarLineCoroutine);
+        _radarLineCoroutine = StartCoroutine(RadarLineVisualCoroutine());
+    }
+
+    void OnDisable()
+    {
+        if (_radarLineCoroutine != null)
+        {
+            StopCoroutine(_radarLineCoroutine);
+            _radarLineCoroutine = null;
+        }
+    }
+
     void Start()
     {
         audioSource = GetComponent<AudioSource>();
@@ -33,8 +51,7 @@ public class Radar : MonoBehaviour
             audioSource = gameObject.AddComponent<AudioSource>();
 
         radarLineBaseRotation = RadarLine.transform.localRotation;
-
-        StartCoroutine(RadarLineVisualCoroutine());
+        // OnEnable already started the coroutine — no need to start it here again
     }
 
     // Updates the RadarLine UI at a low, throttled rate
@@ -53,6 +70,8 @@ public class Radar : MonoBehaviour
 
     void Update()
     {
+        if (PauseManager.IsQuittingToMenu) return;
+
         MinimapRotate.transform.rotation = Quaternion.Euler(
             MinimapRotate.eulerAngles.x,
             MinimapRotate.eulerAngles.y,
