@@ -22,6 +22,10 @@ public class PauseMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExit
     [SerializeField] private AudioClip   hoverSound;
     [SerializeField] private AudioClip   clickSound;
 
+    [Header("Cursor")]
+    [SerializeField] private Texture2D hoverCursor;
+    [SerializeField] private Vector2 cursorHotspot = Vector2.zero;
+
     private Coroutine _bobCoroutine;
     private Vector2   _promptOrigin;
 
@@ -47,6 +51,8 @@ public class PauseMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExit
     {
         if (!PauseManager.IsPaused) return;
 
+        Cursor.SetCursor(hoverCursor, cursorHotspot, CursorMode.Auto);
+
         if (audioSource != null && hoverSound != null)
             audioSource.PlayOneShot(hoverSound);
 
@@ -59,6 +65,7 @@ public class PauseMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExit
 
     public void OnPointerExit(PointerEventData eventData)
     {
+        Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
         StopBob();
 
         if (selectPrompt != null)

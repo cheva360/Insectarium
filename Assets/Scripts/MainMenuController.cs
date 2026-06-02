@@ -15,6 +15,10 @@ public class MainMenuController : MonoBehaviour
 
     [Header("Main Menu UI")]
     [SerializeField] private GameObject mainMenuRoot;
+    [Tooltip("Screen-space button GameObjects active only while the main menu is shown.")]
+    [SerializeField] private GameObject[] mainMenuButtons;
+    [Tooltip("Screen-space button GameObjects active only while the settings menu is shown.")]
+    [SerializeField] private GameObject[] settingsButtons;
 
     [Header("Game UI")]
     [SerializeField] private GameObject radarUIRoot;
@@ -99,8 +103,11 @@ public class MainMenuController : MonoBehaviour
         if (mainMenuRoot != null)
             mainMenuRoot.SetActive(true);
 
-        if (settingsMenuRoot != null)
-            settingsMenuRoot.SetActive(false);
+        foreach (var btn in mainMenuButtons)
+            if (btn != null) btn.SetActive(true);
+
+        foreach (var btn in settingsButtons)
+            if (btn != null) btn.SetActive(false);
 
         if (fullscreenCheckImage != null)
             fullscreenCheckImage.gameObject.SetActive(Screen.fullScreen);
@@ -266,6 +273,13 @@ public class MainMenuController : MonoBehaviour
             }
         }
 
+        // After settings fade in completes:
+        foreach (var btn in mainMenuButtons)
+            if (btn != null) btn.SetActive(false);
+
+        foreach (var btn in settingsButtons)
+            if (btn != null) btn.SetActive(true);
+
         _inSettings       = true;
         _activeTransition = null;
     }
@@ -274,6 +288,12 @@ public class MainMenuController : MonoBehaviour
     {
         // Clear settings state immediately so Escape can't re-trigger
         _inSettings = false;
+
+        foreach (var btn in settingsButtons)
+            if (btn != null) btn.SetActive(false);
+
+        foreach (var btn in mainMenuButtons)
+            if (btn != null) btn.SetActive(true);
 
         // 1. Hide settings panel
         if (settingsMenuRoot != null)
@@ -323,20 +343,21 @@ public class MainMenuController : MonoBehaviour
         if (mainMenuRoot != null)
             mainMenuRoot.SetActive(false);
 
+        foreach (var btn in mainMenuButtons)
+            if (btn != null) btn.SetActive(false);
+
+        foreach (var btn in settingsButtons)
+            if (btn != null) btn.SetActive(false);
+
         if (UIController.Instance != null)
         {
-            // Keep entry UI hidden — Portal.TeleportPlayer() fades them in
             if (UIController.Instance.UIEntryParent != null)
                 UIController.Instance.UIEntryParent.SetActive(false);
             if (UIController.Instance.UIEntryCollectedParent != null)
                 UIController.Instance.UIEntryCollectedParent.SetActive(false);
-            // Crosshair activates immediately
             if (UIController.Instance.CursorImage != null)
                 UIController.Instance.CursorImage.gameObject.SetActive(true);
         }
-
-        // radarUIRoot already activated at the start of StartTransition
-        // radarHidden already cleared by Portal.TeleportPlayer()
 
         if (playerController.Instance != null)
             playerController.Instance.SetState(playerController.playerState.Normal);

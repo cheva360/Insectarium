@@ -14,6 +14,8 @@ public class PauseManager : MonoBehaviour
     [Header("Pause UI")]
     [Tooltip("Root GameObject that contains all pause screen UI elements.")]
     [SerializeField] private GameObject pauseScreenRoot;
+    [Tooltip("Screen-space button GameObjects that should only be active while paused.")]
+    [SerializeField] private GameObject[] pauseButtons;
 
     [Header("Post Processing")]
     [Tooltip("The Volume holding the DepthOfField override. Can be the same as UIController's volume.")]
@@ -115,6 +117,10 @@ public class PauseManager : MonoBehaviour
         // Show pause screen
         if (pauseScreenRoot != null)
             pauseScreenRoot.SetActive(true);
+
+        foreach (var btn in pauseButtons)
+            if (btn != null) btn.SetActive(true);
+
 
         // Free the cursor for menu navigation
         Cursor.lockState = CursorLockMode.None;
