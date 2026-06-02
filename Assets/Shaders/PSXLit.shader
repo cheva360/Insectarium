@@ -8,7 +8,7 @@ Shader "Custom/PSXLit"
         _TexScale ("Texture Scale", Float) = 1.0
         
         [MainTexture] _BaseMap("Base Map", 2D) = "white" {}
-        _SnapIntensity ("Snap Intensity", Range(0.0001,0.1)) = 0.0066
+        _SnapIntensity ("Snap Intensity", Range(0.0000,0.1)) = 0.0066
         _AffineOn ("Affine Mapping On", Range(0,1)) = 1
         
         _SpecularExponent("Specular Exponent", Float) = 80
@@ -26,7 +26,7 @@ Shader "Custom/PSXLit"
         {
             Name "ForwardLit"
             Tags { "LightMode"="UniversalForward" }
-            Cull Back
+            Cull Off
             ZWrite On
             ZTest LEqual
 
@@ -120,9 +120,12 @@ Shader "Custom/PSXLit"
                 OUT.positionWS = TransformObjectToWorld(IN.positionOS.xyz);
 
                 // vert snapping
-                float2 screenPos = OUT.positionHCS.xy / OUT.positionHCS.w;
-                screenPos = snapToGrid(screenPos, _SnapIntensity);
-                OUT.positionHCS.xy = screenPos * OUT.positionHCS.w;
+                if (_SnapIntensity != 0)
+                {
+                    float2 screenPos = OUT.positionHCS.xy / OUT.positionHCS.w;
+                    screenPos = snapToGrid(screenPos, _SnapIntensity);
+                    OUT.positionHCS.xy = screenPos * OUT.positionHCS.w;
+                }
 
                 // affine tex mapping
                 OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
