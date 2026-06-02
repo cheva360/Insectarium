@@ -872,7 +872,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c71d794f9f0f60f4b9b8e11a87738052, type: 3}
   m_Name: 
   m_EditorClassIdentifier: '::'
-  wordData: {fileID: 11400000, guid: f3bc85968af93594cbbae7d91d4fbfed, type: 2}
+  audioLogs: []
+  debugUnlockAlways: 0
   casetteLookTarget: {fileID: 0}
   cassette: {fileID: 0}
   casseteFlap: {fileID: 0}
@@ -882,10 +883,15 @@ MonoBehaviour:
   cameraReturnLerpSpeed: 6
   cassetteMouseSensitivity: 0.015
   decoderLight: {fileID: 0}
+  decoderButoLight: {fileID: 0}
+  secondaryLight: {fileID: 0}
   lightDimDuration: 0.8
   lightRestoreDuration: 0.8
   jumpscareFace: {fileID: 0}
   smallCockroach: {fileID: 0}
+  cassetteAudioSource: {fileID: 0}
+  flapOpenClip: {fileID: 0}
+  cassetteInsertedClip: {fileID: 0}
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -1263,11 +1269,30 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: '::'
   goals: []
+  useRandomMovement: 0
+  useRandomScale: 0
+  randomPointSampleRadius: 0.35
+  randomPointAttempts: 10
+  minRandomMoveRadius: 0.2
+  maxRandomMoveRadius: 0.75
   rotationSpeed: 720
   minIdleTime: 1
   maxIdleTime: 4
+  stuckTimeout: 0.75
+  stuckVelocityThreshold: 0.02
   stopOnGoal: 1
+  ignoreCockroaches: 0
+  cockroachType: 0
+  crossLinkBias: 0.6
+  largeTypeWallMargin: 0.15
+  largeBlockCheckRadius: 0.4
+  largeBlockCheckDistance: 0.6
+  minRandomMoveDuration: 1.5
+  maxRandomMoveDuration: 4
+  animatorOverride: {fileID: 0}
   hasStartedMoving: 1
+  MinRandomScale: 0.5
+  MaxRandomScale: 1.5
 --- !u!195 &580070402
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -1644,11 +1669,30 @@ MonoBehaviour:
   - {fileID: 1148040552}
   - {fileID: 1773483328}
   - {fileID: 1713461633}
+  useRandomMovement: 0
+  useRandomScale: 0
+  randomPointSampleRadius: 0.35
+  randomPointAttempts: 10
+  minRandomMoveRadius: 0.2
+  maxRandomMoveRadius: 0.75
   rotationSpeed: 720
   minIdleTime: 1
   maxIdleTime: 4
+  stuckTimeout: 0.75
+  stuckVelocityThreshold: 0.02
   stopOnGoal: 1
+  ignoreCockroaches: 0
+  cockroachType: 0
+  crossLinkBias: 0.6
+  largeTypeWallMargin: 0.15
+  largeBlockCheckRadius: 0.4
+  largeBlockCheckDistance: 0.6
+  minRandomMoveDuration: 1.5
+  maxRandomMoveDuration: 4
+  animatorOverride: {fileID: 0}
   hasStartedMoving: 1
+  MinRandomScale: 0.5
+  MaxRandomScale: 1.5
 --- !u!195 &717059623
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -2082,6 +2126,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Name
       value: radarBug
+      objectReference: {fileID: 0}
+    - target: {fileID: 5474061249592588022, guid: 434eea16dd8a85f4690d79ea9bbe4e4d,
+        type: 3}
+      propertyPath: animationDuration
+      value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 5640934600057685572, guid: 434eea16dd8a85f4690d79ea9bbe4e4d,
         type: 3}
@@ -2523,7 +2572,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1535149031}
   m_HandleRect: {fileID: 1535149030}
   m_Direction: 2
-  m_Value: 1
+  m_Value: 0
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -3430,6 +3479,11 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 3497705610505239476, guid: 1173d68577b88ed43bf35883f4b88bc9,
+        type: 3}
+      propertyPath: startPlayerTarget
+      value: 
+      objectReference: {fileID: 1574609908}
     - target: {fileID: 5054074210690674430, guid: 1173d68577b88ed43bf35883f4b88bc9,
         type: 3}
       propertyPath: m_IsActive
@@ -3861,11 +3915,30 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: '::'
   goals: []
+  useRandomMovement: 0
+  useRandomScale: 0
+  randomPointSampleRadius: 0.35
+  randomPointAttempts: 10
+  minRandomMoveRadius: 0.2
+  maxRandomMoveRadius: 0.75
   rotationSpeed: 720
   minIdleTime: 1
   maxIdleTime: 4
+  stuckTimeout: 0.75
+  stuckVelocityThreshold: 0.02
   stopOnGoal: 1
+  ignoreCockroaches: 0
+  cockroachType: 0
+  crossLinkBias: 0.6
+  largeTypeWallMargin: 0.15
+  largeBlockCheckRadius: 0.4
+  largeBlockCheckDistance: 0.6
+  minRandomMoveDuration: 1.5
+  maxRandomMoveDuration: 4
+  animatorOverride: {fileID: 0}
   hasStartedMoving: 1
+  MinRandomScale: 0.5
+  MaxRandomScale: 1.5
 --- !u!195 &1843353071
 NavMeshAgent:
   m_ObjectHideFlags: 0

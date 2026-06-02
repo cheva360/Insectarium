@@ -99,7 +99,7 @@ public class RadarBug : MonoBehaviour
         }
  
         // ── Phase 2: play animation, then wait for player to collect the item ──
-        handAnimator.SetTrigger(animationTrigger);
+        handAnimator.Play("RadarBug");
         yield return new WaitForSeconds(animationDuration);
  
         UIController.Instance.RequestInteractText(collectibleObject.GetComponent<MonoBehaviour>());
