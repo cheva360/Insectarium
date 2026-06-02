@@ -320,7 +320,23 @@ Shader "Custom/PSXLit"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
+                half4 _BaseColor;
+                float _Tiled;
+                float _TexScale;
+                float4 _BaseMap_ST;
+                half4 _EmissionColor;
+                float4 _EmissionMap_ST;
                 float _SnapIntensity;
+                float _AffineOn;
+                half4 _DiffuseColor;
+                float _SpecularExponent;
+                float4 _k;
+            
+                float _WaveSize;
+                float _WaveLength;
+                float _Frequency;
+                float _MinY;
+                float _MaxY;
             CBUFFER_END
 
             struct DNAttributes
