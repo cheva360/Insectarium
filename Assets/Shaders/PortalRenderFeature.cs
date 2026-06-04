@@ -75,7 +75,21 @@ public class PortalRenderFeature : ScriptableRendererFeature
         public bool EnsureMaterials(Shader mask, Shader view, Shader seal, IReadOnlyList<Portal> portals)
         {
             if (_materialsReady && _maskMat != null && _sealMat != null)
+            {
+                // After a scene reload the ScriptableRendererFeature persists but Portal
+                // instances are new — their ViewMaterial is null.  Re-assign view shaders
+                // to any portal that is missing its material without rebuilding everything.
+                foreach (var portal in portals)
+                {
+                    if (portal != null && portal.ViewMaterial == null)
+                    {
+                        foreach (var p in portals)
+                            p?.SetViewShader(view);
+                        break;
+                    }
+                }
                 return true;
+            }
 
             Cleanup();
 

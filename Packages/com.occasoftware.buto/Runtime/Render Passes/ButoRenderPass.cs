@@ -521,6 +521,10 @@ namespace OccaSoftware.Buto.Runtime
             UnityEngine.Profiling.Profiler.BeginSample("Buto_Setup Material Data");
             cmd.SetGlobalInt(Params.FrameId.Property, Time.frameCount);
 
+            // Ensure _MainLightCookieTexture is always bound for the LightingSampler
+            // compute shader. URP only sets this when the main light has a cookie;
+            // a white fallback is equivalent to no cookie and suppresses the warning.
+            cmd.SetGlobalTexture("_MainLightCookieTexture", Texture2D.whiteTexture);
             cmd.SetGlobalFloat(
               Params.MaxDistanceVolumetric.Id,
               volumetricFog.maxDistanceVolumetric.value
