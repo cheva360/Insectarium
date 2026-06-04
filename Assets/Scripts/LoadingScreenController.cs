@@ -13,6 +13,8 @@ public class LoadingScreenController : MonoBehaviour
     [SerializeField] private float fadeOutDuration = 0.5f;
     [Tooltip("Maximum seconds the video plays before cutting to fade-out. Set to 0 to play the full clip.")]
     [SerializeField] private float maxPlayDuration = 0f;
+    [Tooltip("Time before the video plays")]
+    [SerializeField] private float delayBeforePlay = 0f;
 
     void Awake()
     {
@@ -33,6 +35,7 @@ public class LoadingScreenController : MonoBehaviour
     /// </summary>
     public IEnumerator Play()
     {
+        yield return new WaitForSeconds(delayBeforePlay);
         // ── Activate panel (invisible) so the VideoPlayer is enabled ─────────
         videoCanvasGroup.alpha = 0f;
         videoCanvasGroup.gameObject.SetActive(true);
