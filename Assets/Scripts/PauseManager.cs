@@ -279,6 +279,8 @@ public class PauseManager : MonoBehaviour
         if (playerController.Instance != null)
             playerController.Instance.SetState(playerController.playerState.Cutscene);
 
+        GameController.Instance.MusicFadeOut();   // ← fade out music on quit
+
         float elapsed = 0f;
         while (elapsed < quitFadeOutDuration)
         {

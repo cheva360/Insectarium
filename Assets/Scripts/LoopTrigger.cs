@@ -10,6 +10,11 @@ public class LoopTrigger : MonoBehaviour
 
     private bool _coroutineStarted = false;
 
+    private void OnEnable()
+    {
+        _coroutineStarted = false;
+    }
+
     private void OnTriggerEnter(Collider other)
     {
         if (_coroutineStarted) return;
@@ -25,6 +30,7 @@ public class LoopTrigger : MonoBehaviour
     {
         //play one shot passing out sound
         GameController.Instance.GameControllerAudioSource.PlayOneShot(GameController.Instance.passingOutSound);
+        GameController.Instance.MusicFadeOut();   // ← fade out music with passing-out
         Volume postProcessingVolume = UIController.Instance.PostProcessingVolume;
         UIController.Instance.PostProcessingVolume.profile.TryGet(out DepthOfField dof);
         UIController.Instance.PostProcessingVolume.profile.TryGet(out FilmGrain filmGrain);
@@ -126,6 +132,7 @@ public class LoopTrigger : MonoBehaviour
     {
         GameController.Instance.player.transform.position = GameController.Instance.SpawnLocation.position;
         playerController.Instance.SetState(playerController.playerState.Normal);
+        GameController.Instance.MusicFadeIn();    // ← fade music back in with screen
 
         UIController.Instance.PostProcessingVolume.profile.TryGet(out FilmGrain filmGrain);
         filmGrain.intensity.value = 0f;

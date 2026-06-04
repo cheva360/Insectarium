@@ -14,6 +14,13 @@ public class GameController : MonoBehaviour
     public AudioClip passingOutSound;
     public AudioSource GameControllerAudioSource;
 
+    [Header("Music")]
+    [SerializeField] private AudioClip musicTrack;
+    [SerializeField] private AudioSource musicAudioSource;
+    [SerializeField] private float musicFadeDuration = 1f;
+
+    private Coroutine _musicFadeCoroutine;
+
     public enum LoopCount
     {
         Zero = 0,
@@ -60,12 +67,42 @@ public class GameController : MonoBehaviour
     void Start()
     {
         ApplyLoopState(_currentLoop);
+
+        if (musicTrack != null && musicAudioSource != null)
+        {
+            musicAudioSource.clip = musicTrack;
+            musicAudioSource.loop = true;
+            musicAudioSource.Play();
+        }
     }
 
-    // Update is called once per frame
-    void Update()
+    public void MusicFadeOut(float duration = -1f)
     {
-        
+        if (musicAudioSource == null) return;
+        float d = duration < 0f ? musicFadeDuration : duration;
+        if (_musicFadeCoroutine != null) StopCoroutine(_musicFadeCoroutine);
+        _musicFadeCoroutine = StartCoroutine(FadeMusicCoroutine(musicAudioSource.volume, 0f, d));
+    }
+
+    public void MusicFadeIn(float duration = -1f)
+    {
+        if (musicAudioSource == null) return;
+        float d = duration < 0f ? musicFadeDuration : duration;
+        if (_musicFadeCoroutine != null) StopCoroutine(_musicFadeCoroutine);
+        _musicFadeCoroutine = StartCoroutine(FadeMusicCoroutine(musicAudioSource.volume, 1f, d));
+    }
+
+    private IEnumerator FadeMusicCoroutine(float from, float to, float duration)
+    {
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            musicAudioSource.volume = Mathf.Lerp(from, to, elapsed / duration);
+            yield return null;
+        }
+        musicAudioSource.volume = to;
+        _musicFadeCoroutine = null;
     }
 
 #if UNITY_EDITOR

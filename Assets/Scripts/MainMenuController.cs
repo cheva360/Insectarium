@@ -209,6 +209,7 @@ public class MainMenuController : MonoBehaviour
 
         // 2. Fade screen to black
         float fadeElapsed = 0f;
+        GameController.Instance.MusicFadeOut();   // ← fade out as screen goes black
         while (fadeElapsed < menuFadeOutDuration)
         {
             fadeElapsed += Time.deltaTime;
@@ -223,10 +224,8 @@ public class MainMenuController : MonoBehaviour
         if (startLookTarget != null)
         {
             Vector3 dir = (startLookTarget.position - startPlayerTarget.position).normalized;
-
             float yaw = Quaternion.LookRotation(dir, Vector3.up).eulerAngles.y;
             Player.rotation = Quaternion.Euler(0f, yaw, 0f);
-
             float pitch = -Mathf.Asin(Mathf.Clamp(dir.y, -1f, 1f)) * Mathf.Rad2Deg;
             playerController.Instance.SetVerticalRotation(pitch);
         }
@@ -235,12 +234,12 @@ public class MainMenuController : MonoBehaviour
             Player.rotation = startPlayerTarget.rotation;
         }
 
-        // Re-enable portals after player has been teleported
         foreach (var portal in portals)
             if (portal != null) portal.SetActive(true);
 
         // 4. Fade screen back in
         fadeElapsed = 0f;
+        GameController.Instance.MusicFadeIn();    // ← fade music back in with screen
         while (fadeElapsed < fadeInDuration)
         {
             fadeElapsed += Time.deltaTime;

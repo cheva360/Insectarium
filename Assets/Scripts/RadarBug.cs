@@ -20,6 +20,7 @@ public class RadarBug : MonoBehaviour
     [SerializeField] private Button raiseButton;
     [SerializeField] private AudioSource raiseAudioSource;
     [SerializeField] private AudioClip raiseClip;
+    [SerializeField] private AudioClip cassetteCollectClip;   // ← new field
 
     private bool _sequenceStarted = false;
     private bool _raisePressed = false;
@@ -117,6 +118,10 @@ public class RadarBug : MonoBehaviour
             if (raiseState >= 4)
             {
                 collectibleObject.SetActive(false);
+
+                if (raiseAudioSource != null && cassetteCollectClip != null)
+                    raiseAudioSource.PlayOneShot(cassetteCollectClip);   // ← collect SFX
+
                 UIController.Instance.AddCollected();
                 break;
             }

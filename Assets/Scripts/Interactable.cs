@@ -5,6 +5,9 @@ public class Interactable : MonoBehaviour
     private float _interactionDistance = 3f;
     private float _lookAtRadius = 0.1f;
 
+    [Header("Pickup SFX")]
+    [SerializeField] private AudioClip pickupClip;
+
     private void Start()
     {
         UIController.Instance.AddUIEntry();
@@ -35,6 +38,10 @@ public class Interactable : MonoBehaviour
                 Debug.Log("Interacted with " + gameObject.name);
                 UIController.Instance.ReleaseInteractText(this);
                 UIController.Instance.AddCollected();
+
+                if (pickupClip != null)
+                    AudioSource.PlayClipAtPoint(pickupClip, transform.position);
+
                 Destroy(gameObject);
             }
         }

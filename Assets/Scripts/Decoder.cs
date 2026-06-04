@@ -118,6 +118,7 @@ public class Decoder : MonoBehaviour
         // ── Initial setup ─────────────────────────────────────────────────────
         playerController.Instance.radarHidden = true;
         playerController.Instance.SetState(playerController.playerState.Cutscene);
+        GameController.Instance.MusicFadeOut();   // ← add this line
 
         if (decoderLight != null)
         {
@@ -275,11 +276,7 @@ public class Decoder : MonoBehaviour
         // ── Final cleanup ─────────────────────────────────────────────────────
         UIController.Instance.RestoreEntryParents();
         playerController.Instance.ExitDialogue();
-
-        if (UIController.Instance.UICollectedCount == UIController.Instance.UIEntryCount)
-            Debug.Log("Interacted with Decoder");
-
-        gameObject.GetComponent<LoopTriggerTest>().DecoderTriggered();
+        GameController.Instance.MusicFadeIn();    // ← add this line
     }
 
     /// <summary>

@@ -25,13 +25,25 @@ public class MainMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExitH
 
     private Coroutine _bobCoroutine;
     private Vector2   _promptOrigin;
+    private bool      _promptOriginCached;
 
     public enum ButtonAction { None, Start, Settings }
 
     void OnEnable()
     {
+        _promptOriginCached = false;
+
         if (selectPrompt != null)
+        {
+            // Cache the resting position while the prompt is inactive (untouched layout position)
+            RectTransform rt = selectPrompt.GetComponent<RectTransform>();
+            if (rt != null)
+            {
+                _promptOrigin       = rt.anchoredPosition;
+                _promptOriginCached = true;
+            }
             selectPrompt.SetActive(false);
+        }
     }
 
     void OnDisable()
@@ -91,8 +103,21 @@ public class MainMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExitH
         RectTransform rt = selectPrompt.GetComponent<RectTransform>();
         if (rt == null) return;
 
-        _promptOrigin = rt.anchoredPosition;
-        if (_bobCoroutine != null) StopCoroutine(_bobCoroutine);
+        // Stop any running bob and snap back before (re)capturing origin
+        if (_bobCoroutine != null)
+        {
+            StopCoroutine(_bobCoroutine);
+            _bobCoroutine = null;
+            rt.anchoredPosition = _promptOrigin;
+        }
+
+        // Only cache origin if OnEnable didn't already do it
+        if (!_promptOriginCached)
+        {
+            _promptOrigin       = rt.anchoredPosition;
+            _promptOriginCached = true;
+        }
+
         _bobCoroutine = StartCoroutine(BobCoroutine(rt));
     }
 
