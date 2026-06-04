@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System.IO;
 using UnityEditor;
 using UnityEngine;
@@ -1319,3 +1320,4 @@ public sealed class FoliageMaskPainterWindow : EditorWindow
         return axisIndex * 2 + (normalComponent < 0f ? 1 : 0);
     }
 }
+#endif

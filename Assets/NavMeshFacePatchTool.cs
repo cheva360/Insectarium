@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System.Collections.Generic;
 using Unity.AI.Navigation;
 using UnityEditor;
@@ -1745,3 +1746,4 @@ public sealed class NavMeshFacePatchTool : EditorWindow
         return false;
     }
 }
+#endif
