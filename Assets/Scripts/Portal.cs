@@ -111,6 +111,7 @@ public class Portal : MonoBehaviour
         }
 
         PortalManager.Instance.Register(this);
+        _canTeleport = _startActive;
     }
 
     private void OnDestroy()
@@ -272,6 +273,8 @@ public class Portal : MonoBehaviour
         linkedPortal.RenderPortalCamera();
 
         DisablePortalPair();
+        // Optionally re-arm exit portal here if bidirectional travel is needed:
+        // linkedPortal._canTeleport = true;
         RestoreExitPortalCollision();
         StartClosureSequence();
     }
@@ -387,7 +390,8 @@ public class Portal : MonoBehaviour
         return new Bounds(center, extents * 2f);
     }
 
-    private bool _canTeleport = true;
+    private bool _canTeleport;
+    [SerializeField] private bool _startActive = true;
     private bool _doorAnimationStarted;
 
     private void DisablePortalPair()

@@ -11,11 +11,22 @@ public class PortalManager : MonoBehaviour
     private void Awake()
     {
         Instance = this;
+    }
+
+    private void OnEnable()
+    {
         RenderPipelineManager.beginCameraRendering += OnBeginCameraRendering;
+    }
+
+    private void OnDisable()
+    {
+        RenderPipelineManager.beginCameraRendering -= OnBeginCameraRendering;
+        _portals.Clear();
     }
 
     private void OnDestroy()
     {
+        // OnDisable already handles unsubscription; this is a safety net.
         RenderPipelineManager.beginCameraRendering -= OnBeginCameraRendering;
     }
 

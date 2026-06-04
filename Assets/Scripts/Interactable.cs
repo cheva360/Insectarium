@@ -13,9 +13,11 @@ public class Interactable : MonoBehaviour
     private bool IsLookingAt()
     {
         Ray ray = Camera.main.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-        if (Physics.SphereCast(ray, _lookAtRadius, out RaycastHit hit, _interactionDistance))
+        RaycastHit[] hits = Physics.SphereCastAll(ray, _lookAtRadius, _interactionDistance, Physics.AllLayers, QueryTriggerInteraction.Collide);
+        foreach (RaycastHit hit in hits)
         {
-            return hit.collider != null && hit.collider.gameObject == gameObject;
+            if (hit.collider != null && hit.collider.gameObject == gameObject)
+                return true;
         }
         return false;
     }

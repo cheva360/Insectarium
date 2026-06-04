@@ -154,10 +154,6 @@ public class MainMenuController : MonoBehaviour
         if (_activeTransition != null) return;
         IsInMainMenu = false;
 
-        // Re-enable portals immediately when the player hits Start
-        foreach (var portal in portals)
-            if (portal != null) portal.SetActive(true);
-
         _activeTransition = StartCoroutine(StartTransition());
     }
 
@@ -238,6 +234,10 @@ public class MainMenuController : MonoBehaviour
         {
             Player.rotation = startPlayerTarget.rotation;
         }
+
+        // Re-enable portals after player has been teleported
+        foreach (var portal in portals)
+            if (portal != null) portal.SetActive(true);
 
         // 4. Fade screen back in
         fadeElapsed = 0f;
