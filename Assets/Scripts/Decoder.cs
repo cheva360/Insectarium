@@ -48,6 +48,9 @@ public class Decoder : MonoBehaviour
     [SerializeField] private AudioClip flapOpenClip;
     [SerializeField] private AudioClip cassetteInsertedClip;
 
+    [Header("Loop Trigger")]
+    [SerializeField] private LoopTriggerTest loopTriggerTest;
+
     private float _originalLightIntensity;
     private float _originalSecondaryLightIntensity;
     private Coroutine _lightCoroutine;
@@ -276,7 +279,10 @@ public class Decoder : MonoBehaviour
         // ── Final cleanup ─────────────────────────────────────────────────────
         UIController.Instance.RestoreEntryParents();
         playerController.Instance.ExitDialogue();
-        GameController.Instance.MusicFadeIn();    // ← add this line
+        GameController.Instance.MusicFadeIn();
+
+        if (loopTriggerTest != null)
+            loopTriggerTest.DecoderTriggered();
     }
 
     /// <summary>
