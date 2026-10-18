@@ -33,6 +33,11 @@ public class SmallCockroach : MonoBehaviour
     [SerializeField] private float largeBlockCheckDistance = 0.6f;
     [SerializeField] private float minRandomMoveDuration = 1.5f;
     [SerializeField] private float maxRandomMoveDuration = 4f;
+    [SerializeField] private AudioSource roachAudioSource;
+    [SerializeField] private float minCrawlPitch = 0.85f;
+    [SerializeField] private float maxCrawlPitch = 1.15f;
+    [SerializeField] private float minCrawlVolume = 0.3f;
+    [SerializeField] private float maxCrawlVolume = 0.8f;
 
     [SerializeField] private Animator animatorOverride;
     public bool hasStartedMoving = true;
@@ -100,6 +105,7 @@ public class SmallCockroach : MonoBehaviour
                 if (animator != null)
                     animator.SetBool("isMoving", false);
 
+                UpdateCrawlAudio(false);
                 return;
             }
 
@@ -107,7 +113,11 @@ public class SmallCockroach : MonoBehaviour
             movementFinished = !TrySetNextDestination(true);
         }
 
-        if (!hasStartedMoving || movementFinished) return;
+        if (!hasStartedMoving || movementFinished)
+        {
+            UpdateCrawlAudio(false);
+            return;
+        }
 
         if (agent.isOnOffMeshLink && !isTraversingLink)
         {
@@ -127,6 +137,7 @@ public class SmallCockroach : MonoBehaviour
                 randomMoveTimer = 0f;
                 stuckTimer = 0f;
                 agent.ResetPath();
+                UpdateCrawlAudio(false);
 
                 // Enter idle so the cockroach pauses before picking a new goal.
                 isIdling = true;
@@ -160,6 +171,8 @@ public class SmallCockroach : MonoBehaviour
 
         if (animator != null)
             animator.SetBool("isMoving", isMoving);
+
+        UpdateCrawlAudio(isMoving);
 
         HandleRotation();
 
@@ -267,6 +280,29 @@ public class SmallCockroach : MonoBehaviour
         stuckTimer = 0f;
     }
 
+    private void UpdateCrawlAudio(bool shouldPlay)
+    {
+        if (roachAudioSource == null) return;
+
+        // PauseManager pauses/resumes all AudioSources itself; don't fight it.
+        if (PauseManager.IsPaused) return;
+
+        if (shouldPlay)
+        {
+            if (!roachAudioSource.isPlaying)
+            {
+                roachAudioSource.loop = true;
+                roachAudioSource.pitch = Random.Range(minCrawlPitch, maxCrawlPitch);
+                roachAudioSource.volume = Random.Range(minCrawlVolume, maxCrawlVolume);
+                roachAudioSource.Play();
+            }
+        }
+        else if (roachAudioSource.isPlaying)
+        {
+            roachAudioSource.Stop();
+        }
+    }
+
     private System.Collections.IEnumerator TraverseLink()
     {
         RemoveWallMargin();
@@ -315,6 +351,7 @@ public class SmallCockroach : MonoBehaviour
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, t);
 
             SetAnimatorBool("isMoving", true);
+            UpdateCrawlAudio(true);
 
             yield return null;
         }
