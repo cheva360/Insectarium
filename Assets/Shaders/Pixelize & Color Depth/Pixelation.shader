@@ -2,9 +2,9 @@ Shader "Custom/Pixelation"
 {
     Properties
     {
-        _WidthPixelation("Width Pixelation", Float) = 512
-        _HeightPixelation("Height Pixelation", Float) = 512
-        _ColorPrecision("Color Precision", Float) = 32.0
+        _WidthPixelation("Width Pixelation", Integer) = 512
+        _HeightPixelation("Height Pixelation", Integer) = 512
+        _ColorPrecision("Color Precision", Integer) = 32
     }
 
     SubShader
@@ -42,7 +42,7 @@ Shader "Custom/Pixelation"
                 
                 float4 col = SAMPLE_TEXTURE2D_X_LOD(_BlitTexture, sampler_LinearRepeat, uv, _BlitMipLevel);
                 //color precision
-                col = floor(col * _ColorPrecision)/_ColorPrecision;
+                //col = floor(col * _ColorPrecision)/_ColorPrecision;
                 return col;
             }
             ENDHLSL

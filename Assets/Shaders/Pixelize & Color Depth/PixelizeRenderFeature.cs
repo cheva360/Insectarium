@@ -15,7 +15,6 @@ public class PixelizeRenderFeature : ScriptableRendererFeature
 
         static readonly int WidthPixelation = Shader.PropertyToID("_WidthPixelation");
         static readonly int HeightPixelation = Shader.PropertyToID("_HeightPixelation");
-        static readonly int ColorPrecision = Shader.PropertyToID("_ColorPrecision");
 
         public void Setup(ref PixelationSettings settings, ref Material pixelizeMaterial)
         {
@@ -25,9 +24,9 @@ public class PixelizeRenderFeature : ScriptableRendererFeature
 
             requiresIntermediateTexture = true;
 
-            material.SetFloat(WidthPixelation, settings.widthPixelation);
-            material.SetFloat(HeightPixelation, settings.heightPixelation);
-            material.SetFloat(ColorPrecision, settings.colorPrecision);
+            material.SetInteger(WidthPixelation, settings.widthPixelation);
+            material.SetInteger(HeightPixelation, settings.heightPixelation);
+            //material.SetInteger(ColorPrecision, settings.colorPrecision);
         }
         private class PassData { }
 
@@ -75,8 +74,8 @@ public class PixelizeRenderFeature : ScriptableRendererFeature
 
             requiresIntermediateTexture = true;
 
-            material.SetInteger(Steps, settings.steps);
-            material.SetFloat(RenderScale, settings.render_scale);
+            material.SetInteger(Steps, settings.colorPrecision);
+            material.SetFloat(RenderScale, settings.renderScale);
         }
 
         public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
@@ -111,9 +110,9 @@ public class PixelizeRenderFeature : ScriptableRendererFeature
     public class PixelationSettings
     {
         public bool pixelize = true;
-        public float widthPixelation = 512;
-        public float heightPixelation = 512;
-        public float colorPrecision = 32.0f;
+        public int widthPixelation = 512;
+        public int heightPixelation = 512;
+        //public int colorPrecision = 32;
 
         public RenderPassEvent pixelizePassEvent = RenderPassEvent.AfterRenderingPostProcessing;
     }
@@ -121,8 +120,8 @@ public class PixelizeRenderFeature : ScriptableRendererFeature
     public class DitherSettings
     {
         public bool dither = true;
-        public int steps = 16;
-        public float render_scale = 1.0f;
+        public int colorPrecision = 16;
+        public float renderScale = 1.0f;
 
         public RenderPassEvent ditherPassEvent = RenderPassEvent.AfterRenderingPostProcessing;
     }
