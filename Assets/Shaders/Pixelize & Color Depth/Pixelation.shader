@@ -42,7 +42,7 @@ Shader "Custom/Pixelation"
                 
                 float4 col = SAMPLE_TEXTURE2D_X_LOD(_BlitTexture, sampler_LinearRepeat, uv, _BlitMipLevel);
                 //color precision
-                //col = floor(col * _ColorPrecision)/_ColorPrecision;
+                col = floor(col * _ColorPrecision)/_ColorPrecision;
                 return col;
             }
             ENDHLSL

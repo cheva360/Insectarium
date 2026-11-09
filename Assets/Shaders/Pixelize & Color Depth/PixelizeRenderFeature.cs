@@ -15,6 +15,7 @@ public class PixelizeRenderFeature : ScriptableRendererFeature
 
         static readonly int WidthPixelation = Shader.PropertyToID("_WidthPixelation");
         static readonly int HeightPixelation = Shader.PropertyToID("_HeightPixelation");
+        static readonly int ColorPrecision = Shader.PropertyToID("_ColorPrecision");
 
         public void Setup(ref PixelationSettings settings, ref Material pixelizeMaterial)
         {
@@ -26,7 +27,7 @@ public class PixelizeRenderFeature : ScriptableRendererFeature
 
             material.SetInteger(WidthPixelation, settings.widthPixelation);
             material.SetInteger(HeightPixelation, settings.heightPixelation);
-            //material.SetInteger(ColorPrecision, settings.colorPrecision);
+            material.SetInteger(ColorPrecision, settings.colorPrecision);
         }
         private class PassData { }
 
@@ -112,7 +113,7 @@ public class PixelizeRenderFeature : ScriptableRendererFeature
         public bool pixelize = true;
         public int widthPixelation = 512;
         public int heightPixelation = 512;
-        //public int colorPrecision = 32;
+        public int colorPrecision = 32;
 
         public RenderPassEvent pixelizePassEvent = RenderPassEvent.AfterRenderingPostProcessing;
     }
