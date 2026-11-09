@@ -2,8 +2,7 @@ Shader "Custom/Pixelation"
 {
     Properties
     {
-        _WidthPixelation("Width Pixelation", Integer) = 512
-        _HeightPixelation("Height Pixelation", Integer) = 512
+        _Pixelation("Pixelation", Integer) = 512
         _ColorPrecision("Color Precision", Integer) = 32
     }
 
@@ -24,8 +23,7 @@ Shader "Custom/Pixelation"
             TEXTURE2D(_BaseMap);
             SAMPLER(sampler_BaseMap);
 
-            float _WidthPixelation;
-            float _HeightPixelation;
+            float _Pixelation;
             float _ColorPrecision;
 
             CBUFFER_START(UnityPerMaterial)
@@ -37,8 +35,9 @@ Shader "Custom/Pixelation"
             {
                 //pixelation 
                 float2 uv = IN.texcoord.xy;
-                uv.x = floor(uv.x * _WidthPixelation) / _WidthPixelation;
-                uv.y = floor(uv.y * _HeightPixelation) / _HeightPixelation;
+                _Pixelation *= 1000;
+                uv.x = floor(uv.x * _Pixelation * _BlitTexture_TexelSize.y) / (_Pixelation * _BlitTexture_TexelSize.y);
+                uv.y = floor(uv.y * _Pixelation * _BlitTexture_TexelSize.x) / (_Pixelation * _BlitTexture_TexelSize.x);
                 
                 float4 col = SAMPLE_TEXTURE2D_X_LOD(_BlitTexture, sampler_LinearRepeat, uv, _BlitMipLevel);
                 //color precision
