@@ -132,8 +132,7 @@ MonoBehaviour:
   m_Active: 1
   pixelSettings:
     pixelize: 1
-    widthPixelation: 512
-    heightPixelation: 512
+    pixelation: 512
     colorPrecision: 32
     pixelizePassEvent: 600
   ditherSettings:

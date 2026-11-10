@@ -138,14 +138,13 @@ MonoBehaviour:
   m_Active: 1
   pixelSettings:
     pixelize: 1
-    widthPixelation: 512
-    heightPixelation: 512
+    pixelation: 738
     colorPrecision: 32
     pixelizePassEvent: 600
   ditherSettings:
-    dither: 1
+    dither: 0
     colorPrecision: 5
-    renderScale: 1
+    renderScale: 0.5
     ditherPassEvent: 600
   pixelShader: {fileID: 4800000, guid: 18aefb670bc756345a37703f40442f5d, type: 3}
   ditherShader: {fileID: 4800000, guid: 20e5c5c9f5c4c574d9fca2651e07206a, type: 3}

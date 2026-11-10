@@ -11,7 +11,9 @@ Material:
   m_Shader: {fileID: 4800000, guid: c924513c83d3b3746803f0d285cf5a0f, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
+  m_ValidKeywords:
+  - _AFFINE_ON
+  - _SNAP_ON
   m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
@@ -80,7 +82,10 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
-    m_Ints: []
+    m_Ints:
+    - _AFFINE: 1
+    - _SNAP: 1
+    - _TILED: 0
     m_Floats:
     - _AddPrecomputedVelocity: 0
     - _AffineOn: 1

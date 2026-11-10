@@ -4,12 +4,13 @@ Shader "Custom/PSXLit"
     {
         [MainColor] _DiffuseColor("Diffuse Color", Color) = (1,1,1,1)
         
-        _Tiled ("Tiled Texture", Range(0, 1)) = 0.0
+        [Toggle] _TILED ("Tiled Texture", Integer) = 0
         _TexScale ("Texture Scale", Float) = 1.0
         
         [MainTexture] _BaseMap("Base Map", 2D) = "white" {}
+        [Toggle] _SNAP ("Snap On", Integer) = 0
         _SnapIntensity ("Snap Intensity", Range(0.0000,0.1)) = 0.0066
-        _AffineOn ("Affine Mapping On", Range(0,1)) = 1
+        [Toggle] _AFFINE ("Affine Mapping On", Integer) = 0
         
         _SpecularExponent("Specular Exponent", Float) = 80
         _k ("Ambient, Diffuse, Specular", Vector) = (0.1,0.1,0.5)
@@ -46,6 +47,10 @@ Shader "Custom/PSXLit"
             #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile _ _ADDITIONAL_LIGHT_SHADOWS
+            
+            #pragma shader_feature _TILED_ON
+            #pragma shader_feature _SNAP_ON
+            #pragma shader_feature _AFFINE_ON
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -77,13 +82,11 @@ Shader "Custom/PSXLit"
 
             CBUFFER_START(UnityPerMaterial)
                 half4 _BaseColor;
-                float _Tiled;
                 float _TexScale;
                 float4 _BaseMap_ST;
                 half4 _EmissionColor;
                 float4 _EmissionMap_ST;
                 float _SnapIntensity;
-                float _AffineOn;
                 half4 _DiffuseColor;
                 float _SpecularExponent;
                 float4 _k;
@@ -144,17 +147,17 @@ Shader "Custom/PSXLit"
                 inputData.normalizedScreenSpaceUV = GetNormalizedScreenSpaceUV(OUT.positionHCS);
 
                 // vert snapping
-                if (_SnapIntensity != 0)
-                {
+                #if _SNAP_ON
                     float2 screenPos = OUT.positionHCS.xy / OUT.positionHCS.w;
                     screenPos = snapToGrid(screenPos, _SnapIntensity);
                     OUT.positionHCS.xy = screenPos * OUT.positionHCS.w;
-                }
+                #endif
 
                 // affine tex mapping
                 OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap);
-                if (_AffineOn)
+                #if _AFFINE_ON
                     OUT.uv = TRANSFORM_TEX(IN.uv, _BaseMap) * OUT.positionHCS.w;
+                #endif
 
                 // gouraud (vertex) shading
                 Light light = GetMainLight();
@@ -202,11 +205,11 @@ Shader "Custom/PSXLit"
             half4 frag(Varyings IN) : SV_Target
             {
                 half4 color = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv) * IN.color;
-                if (_AffineOn)
+                #if _AFFINE_ON
                     color = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, IN.uv / IN.positionHCS.w) * IN.color;
+                #endif
                 
-                if (_Tiled)
-                {
+                #if _TILED_ON
                     float3 uv = IN.positionWS * _TexScale;
                     float3 Node_Blend = pow(abs(IN.normal), 1);
                     Node_Blend /= dot(Node_Blend, 1.0);
@@ -215,15 +218,14 @@ Shader "Custom/PSXLit"
                     float4 Node_Y = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv.xz);
                     float4 Node_Z = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv.xy);
                     
-                    if (_AffineOn)
-                    {
+                    #if _AFFINE_ON
                         Node_X = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv.zy / IN.positionHCS.w);
                         Node_Y = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv.xz / IN.positionHCS.w);
                         Node_Z = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv.xy / IN.positionHCS.w);
-                    }
+                    #endif
 
                     return Node_X * Node_Blend.x + Node_Y * Node_Blend.y + Node_Z * Node_Blend.z;
-                }
+                #endif
                     
                 half4 emission_col = SAMPLE_TEXTURE2D(_EmissionMap, sampler_EmissionMap, IN.uv) * _EmissionColor;
                 color += emission_col;
